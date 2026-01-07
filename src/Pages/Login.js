@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API_BASE_URL from "../config/api";
 
 function Login({ onLogin }) {
   const [identifier, setIdentifier] = useState(''); // Email or phone
@@ -16,7 +17,7 @@ function Login({ onLogin }) {
     console.log("Submitting login:", { identifier, password });
     
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/login', {
+      const response = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier, password })
@@ -49,7 +50,7 @@ function Login({ onLogin }) {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/direct-reset-password', {
+      const response = await fetch(`${API_BASE_URL}/api/direct-reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ identifier: fpIdentifier, newPassword: fpNewPassword })

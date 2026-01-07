@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom';
+import API_BASE_URL from "../config/api";
 
 function Home({ products = [], onAddToCart, user, onProductUpdate }) {
   const navigate = useNavigate();
@@ -73,7 +74,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
   const handleUpdateProduct = async (e) => {
     e.preventDefault();
     try {
-        const response = await fetch(`http://127.0.0.1:5000/api/products/${selectedProduct._id}`, {
+        const response = await fetch(`${API_BASE_URL}/api/products/${selectedProduct._id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(editFormData)
@@ -133,7 +134,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
     };
 
     try {
-        const response = await fetch('http://127.0.0.1:5000/api/orders', {
+        const response = await fetch(`${API_BASE_URL}/api/orders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(orderData)

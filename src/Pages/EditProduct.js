@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import API_BASE_URL from "../config/api";
 
 function EditProduct() {
   const { id } = useParams();
@@ -14,7 +15,7 @@ function EditProduct() {
 
   // Fetch product data on load
   useEffect(() => {
-    fetch('http://localhost:5000/api/products')
+    fetch(`${API_BASE_URL}/api/products`)
       .then(res => res.json())
       .then(products => {
         const product = products.find(p => p._id === id);
@@ -41,7 +42,7 @@ function EditProduct() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`http://127.0.0.1:5000/api/products/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

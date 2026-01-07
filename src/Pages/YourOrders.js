@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+import API_BASE_URL from "../config/api";
 function YourOrders({ user }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,7 +12,7 @@ function YourOrders({ user }) {
     }
 
     setLoading(true);
-    fetch(`http://127.0.0.1:5000/api/orders?email=${user.email}`)
+    fetch(`${API_BASE_URL}/api/orders?email=${user.email}`)
       .then(res => res.json())
       .then(data => {
         setOrders(data);
@@ -27,7 +27,7 @@ function YourOrders({ user }) {
   const handleCancel = (id) => {
     if (!window.confirm("Are you sure you want to cancel this order?")) return;
 
-    fetch(`http://127.0.0.1:5000/api/orders/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE_URL}/api/orders/${id}`, { method: 'DELETE' })
       .then(res => {
         if (res.ok) {
            setOrders(orders.filter(o => o._id !== id));

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import API_BASE_URL from "./config/api";
 
 import Home from "./Pages/Home";
 import Login from "./Pages/Login";
@@ -60,7 +61,7 @@ function App() {
 
   // Fetch products from backend on mount
   useEffect(() => {
-     fetch('http://127.0.0.1:5000/api/products')
+     fetch(`${API_BASE_URL}/api/products`)
        .then(res => res.json())
        .then(data => setProducts(data))
        .catch(err => console.error("Error fetching products:", err));
@@ -121,7 +122,7 @@ function App() {
   };
 
   const refreshProducts = () => {
-    fetch('http://127.0.0.1:5000/api/products')
+    fetch(`${API_BASE_URL}/api/products`)
       .then(res => res.json())
       .then(data => setProducts(data))
       .catch(err => console.error("Error fetching products:", err));

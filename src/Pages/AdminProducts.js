@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-
+import API_BASE_URL from "../config/api";
 function AdminProducts() {
   const [products, setProducts] = useState([]);
 
   const fetchProducts = () => {
-    fetch('http://localhost:5000/api/products')
+    fetch(`${API_BASE_URL}/api/products`)
       .then(res => res.json())
       .then(data => setProducts(data))
       .catch(err => console.error("Error:", err));
@@ -16,7 +16,7 @@ function AdminProducts() {
   }, []);
 
   const handleSeed = () => {
-    fetch('http://localhost:5000/api/seed', { method: 'POST' })
+    fetch(`${API_BASE_URL}/api/seed`, { method: 'POST' })
       .then(res => res.json())
       .then(data => {
         alert(data.message);
@@ -28,7 +28,7 @@ function AdminProducts() {
   const handleDelete = (id) => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
 
-    fetch(`http://127.0.0.1:5000/api/products/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE_URL}/api/products/${id}`, { method: 'DELETE' })
       .then(res => {
         if (res.ok) {
             setProducts(products.filter(p => p._id !== id));

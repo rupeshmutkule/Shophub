@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+import API_BASE_URL from "../config/api";
 function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,7 +10,7 @@ function AdminOrders() {
   }, []);
 
   const fetchOrders = () => {
-    fetch('http://127.0.0.1:5000/api/orders')
+    fetch(`${API_BASE_URL}/api/orders`)
       .then(res => res.json())
       .then(data => {
         setOrders(data);
@@ -25,7 +25,7 @@ function AdminOrders() {
   const handlePermanentDelete = (id) => {
     if (!window.confirm("PERMANENTLY DELETE this order from the database? This cannot be undone.")) return;
 
-    fetch(`http://127.0.0.1:5000/api/orders/${id}`, {
+    fetch(`${API_BASE_URL}/api/orders/${id}`, {
       method: 'DELETE'
     })
       .then(res => {
@@ -42,7 +42,7 @@ function AdminOrders() {
   const handleAccept = (id) => {
     if (!window.confirm("Accept this order?")) return;
 
-    fetch(`http://127.0.0.1:5000/api/orders/${id}/status`, {
+    fetch(`${API_BASE_URL}/api/orders/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'accepted' })
@@ -58,7 +58,7 @@ function AdminOrders() {
   const handleReject = (id) => {
     if (!window.confirm("Reject and remove this order? This will also remove it from the customer's order page.")) return;
 
-    fetch(`http://127.0.0.1:5000/api/orders/${id}/status`, {
+    fetch(` ${API_BASE_URL}/api/orders/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'rejected' })
