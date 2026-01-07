@@ -1,16 +1,15 @@
 // server.js
-require('dotenv').config(); // Load environment variables from .env
-
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const fetch = require('node-fetch'); // For seeding products
+import 'dotenv/config'; // Load environment variables from .env
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import fetch from 'node-fetch'; // For seeding products
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
-console.log('🔥🔥🔥 BACKEND VERSION 2.1 - PRODUCTION READY 🔥🔥🔥');
+console.log('🔥🔥🔥 BACKEND VERSION 2.2 - PRODUCTION READY (ES MODULE) 🔥🔥🔥');
 
 // ------------------ MIDDLEWARE ------------------
 app.use(cors()); // Allow cross-origin requests
@@ -26,10 +25,7 @@ app.use((req, res, next) => {
 });
 
 // ------------------ DATABASE ------------------
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ MongoDB Connected'))
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
@@ -99,7 +95,7 @@ app.post('/api/products', async (req, res) => {
   }
 });
 
-// Seed products (only if database has less than 25)
+// Seed products
 app.post('/api/seed', async (req, res) => {
   try {
     const count = await Product.countDocuments();
