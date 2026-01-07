@@ -1,7 +1,7 @@
-// src/config/api.js or wherever you keep API_BASE_URL
+// src/config/api.js
 const API_BASE_URL =
   process.env.NODE_ENV === "production"
-    ? "https://<>" // <-- replace this with your live backend URL
-    : "http://127.0.0.1:5000"; // local backend
+    ? "https://shophub-6ua7.onrender.com" // Render backend URL
+    : "http://127.0.0.1:5000"; // Local backend
 
 export default API_BASE_URL;
