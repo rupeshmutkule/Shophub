@@ -26,7 +26,6 @@ function App() {
       return null;
     }
   });
-  const [sessionChecked, setSessionChecked] = useState(false);
 
   // Check session on mount
   useEffect(() => {
@@ -45,8 +44,6 @@ function App() {
         }
       } catch (err) {
         console.error('Session check failed:', err);
-      } finally {
-        setSessionChecked(true);
       }
     };
     checkSession();
