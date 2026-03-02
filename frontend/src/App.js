@@ -26,6 +26,31 @@ function App() {
       return null;
     }
   });
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  // Check session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/users/current`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user) {
+            // Update user from session
+            localStorage.setItem('user', JSON.stringify(data.user));
+            setUser(data.user);
+          }
+        }
+      } catch (err) {
+        console.error('Session check failed:', err);
+      } finally {
+        setSessionChecked(true);
+      }
+    };
+    checkSession();
+  }, []);
 
   // Listen for storage changes (multi-tab sync)
   useEffect(() => {
@@ -52,7 +77,17 @@ function App() {
     navigate('/');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Call backend logout to destroy session
+      await fetch(`${API_BASE_URL}/api/users/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+    
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     setUser(null);

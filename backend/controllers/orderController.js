@@ -55,11 +55,12 @@ export const getOrders = async (req, res) => {
     console.log(`👤 User in session:`, req.session.user);
     console.log(`📧 Email query param:`, email);
     
-    // Check if user is admin/host - show ALL orders
+    // Check if user is admin/host - show ALL orders (no filter)
     if (req.session.user && (req.session.user.userType === 'admin' || req.session.user.userType === 'host')) {
-      // Admin/Host sees all orders (no filter)
+      // Admin/Host sees all orders - leave query empty
       console.log(`✅ Admin/Host user - showing ALL orders`);
       console.log(`   UserType: ${req.session.user.userType}`);
+      // Don't add any filter - query stays as {}
     }
     // If email is provided in query, filter by email
     else if (email) {
@@ -87,6 +88,7 @@ export const getOrders = async (req, res) => {
       console.log(`   - Email: ${orders[0].email}`);
       console.log(`   - SessionId: ${orders[0].sessionId}`);
       console.log(`   - Customer: ${orders[0].customerName}`);
+      console.log(`   - Status: ${orders[0].status}`);
     }
     console.log('========================\n');
     
