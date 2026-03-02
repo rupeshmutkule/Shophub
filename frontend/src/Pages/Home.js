@@ -16,11 +16,6 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
 
   const handleBuyClick = (product, e) => {
     e.stopPropagation();
-    if (!user) {
-      alert("Please login to buy products.");
-      navigate('/login');
-      return;
-    }
     setSelectedProduct(product);
     setShowBuyModal(true);
   };
@@ -29,18 +24,14 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
     if (user) {
       setBuyFormData(prev => ({
         ...prev,
-        fullName: `${user.firstName} ${user.lastName}`
+        fullName: `${user.firstName} ${user.lastName}`,
+        email: user.email
       }));
     }
   }, [user]);
 
   const handleCartClick = (product, e) => {
     e.stopPropagation();
-    if (!user) {
-      alert("Please login to add items to cart.");
-      navigate('/login');
-      return;
-    }
     onAddToCart(product);
   };
 
@@ -112,6 +103,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
   // Buy Form State
   const [buyFormData, setBuyFormData] = React.useState({
     fullName: user ? `${user.firstName} ${user.lastName}` : '',
+    email: user ? user.email : '',
     address: '', city: '', zip: ''
   });
 
@@ -125,7 +117,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
 
     const orderData = {
         customerName: buyFormData.fullName,
-        email: user.email, // Use account email for isolation
+        email: buyFormData.email,
         address: buyFormData.address,
         city: buyFormData.city,
         zip: buyFormData.zip,
@@ -137,6 +129,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
         const response = await fetch(`${API_BASE_URL}/api/orders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', // Include session cookies
             body: JSON.stringify(orderData)
         });
 
@@ -198,7 +191,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {products.map((product) => (
               <div 
-                key={product.id} 
+                key={product._id || product.id} 
                 onClick={() => handleCardClick(product)}
                 className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer transform hover:-translate-y-2"
               >
@@ -338,7 +331,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                  <p className="leading-relaxed">{selectedProduct.description}</p>
                </div>
 
-               {user && user.userType !== 'host' && (
+               {(!user || user.userType !== 'host') && (
                  <div className="grid grid-cols-2 gap-4 mt-auto">
                    <button 
                       onClick={(e) => handleCartClick(selectedProduct, e)}
@@ -493,6 +486,20 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                     value={buyFormData.fullName}
                     onChange={handleBuyChange}
                     required 
+                    placeholder="John Doe"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-300" 
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                  <input 
+                    type="email" 
+                    name="email"
+                    value={buyFormData.email}
+                    onChange={handleBuyChange}
+                    required 
+                    placeholder="your@email.com"
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-300" 
                   />
                 </div>
@@ -505,6 +512,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                     onChange={handleBuyChange}
                     required 
                     rows="3" 
+                    placeholder="123 Main Street"
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none transition-all duration-300"
                   ></textarea>
                 </div>

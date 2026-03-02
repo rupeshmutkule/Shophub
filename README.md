@@ -1,70 +1,280 @@
-# Getting Started with Create React App
+# 🛍️ ShopHub - E-Commerce Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A full-stack e-commerce application built with React and Node.js, featuring MVC architecture and session-based authentication.
 
-## Available Scripts
+## ✨ Features
 
-In the project directory, you can run:
+- 🛒 **Guest Checkout** - Purchase without creating an account
+- 👤 **User Accounts** - Register and track orders
+- 📦 **Order Management** - Track order status and history
+- 🔐 **Session-Based Auth** - Secure session management
+- 👨‍💼 **Admin Panel** - Manage products and orders
+- 🎨 **Modern UI** - Built with Tailwind CSS
+- 📱 **Responsive Design** - Works on all devices
 
-### `npm start`
+## 🏗️ Architecture
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+This project follows the **MVC (Model-View-Controller)** pattern:
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```
+┌─────────────────────────────────────────┐
+│         Frontend (React)                │
+│              View Layer                 │
+└──────────────┬──────────────────────────┘
+               │
+┌──────────────▼──────────────────────────┐
+│         Backend (Express)               │
+│  ┌────────────────────────────────┐    │
+│  │  Routes (API Endpoints)        │    │
+│  └──────────┬─────────────────────┘    │
+│  ┌──────────▼─────────────────────┐    │
+│  │  Controllers (Business Logic)  │    │
+│  └──────────┬─────────────────────┘    │
+│  ┌──────────▼─────────────────────┐    │
+│  │  Models (Data Layer)           │    │
+│  └──────────┬─────────────────────┘    │
+└─────────────┼──────────────────────────┘
+              │
+┌─────────────▼──────────────────────────┐
+│         MongoDB Database                │
+└─────────────────────────────────────────┘
+```
 
-### `npm test`
+## 🚀 Quick Start
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Prerequisites
+- Node.js (v14 or higher)
+- MongoDB (local or Atlas)
+- npm or yarn
 
-### `npm run build`
+### Installation
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. **Clone the repository**
+```bash
+git clone <your-repo-url>
+cd Shop-hub
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. **Install backend dependencies**
+```bash
+cd backend
+npm install
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+3. **Configure environment variables**
 
-### `npm run eject`
+Create/update `backend/.env`:
+```env
+MONGO_URI=your_mongodb_connection_string
+PORT=5000
+SESSION_SECRET=your_secret_key_change_in_production
+FRONTEND_URL=http://localhost:3000
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+4. **Start the backend**
+```bash
+npm start
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+5. **Install frontend dependencies** (in a new terminal)
+```bash
+cd frontend
+npm install
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+6. **Start the frontend**
+```bash
+npm start
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+7. **Open your browser**
+```
+http://localhost:3000
+```
 
-## Learn More
+## 📁 Project Structure
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```
+Shop-hub/
+├── backend/                 # Backend (Node.js + Express)
+│   ├── config/             # Configuration files
+│   ├── controllers/        # Business logic
+│   ├── middleware/         # Custom middleware
+│   ├── models/             # Database schemas
+│   ├── routes/             # API endpoints
+│   └── server.js           # Entry point
+│
+├── frontend/               # Frontend (React)
+│   ├── src/
+│   │   ├── components/    # Reusable components
+│   │   ├── Pages/         # Page components
+│   │   └── config/        # Configuration
+│   └── public/            # Static files
+│
+└── docs/                  # Documentation
+    ├── QUICK_START.md
+    ├── SETUP_GUIDE.md
+    └── ...
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 🔌 API Endpoints
 
-### Code Splitting
+### Products
+- `GET /api/products` - Get all products
+- `POST /api/products` - Create product
+- `PUT /api/products/:id` - Update product
+- `DELETE /api/products/:id` - Delete product
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Users
+- `POST /api/users/signup` - Register user
+- `POST /api/users/login` - Login user
+- `POST /api/users/logout` - Logout user
+- `GET /api/users/current` - Get current user
 
-### Analyzing the Bundle Size
+### Orders
+- `POST /api/orders` - Create order
+- `GET /api/orders` - Get orders (session-based)
+- `DELETE /api/orders/:id` - Cancel order
+- `PATCH /api/orders/:id/status` - Update status (admin)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### Contact
+- `POST /api/contact` - Submit contact form
 
-### Making a Progressive Web App
+## 🎯 Key Features Explained
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+### Guest Checkout
+Users can purchase products without creating an account. Orders are tracked using session IDs.
 
-### Advanced Configuration
+### Session Management
+- Secure session cookies (httpOnly)
+- 24-hour session expiry
+- Automatic session creation
+- Orders linked to sessions
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Admin Features
+- View all orders
+- Accept/reject orders
+- Manage products
+- View statistics
 
-### Deployment
+## 📚 Documentation
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+- **[QUICK_START.md](QUICK_START.md)** - Get started in 2 minutes
+- **[SETUP_GUIDE.md](SETUP_GUIDE.md)** - Detailed setup instructions
+- **[MIGRATION_SUMMARY.md](MIGRATION_SUMMARY.md)** - Architecture migration details
+- **[FILE_STRUCTURE.md](FILE_STRUCTURE.md)** - Complete file structure
+- **[backend/README.md](backend/README.md)** - Backend API documentation
+- **[backend/ARCHITECTURE.md](backend/ARCHITECTURE.md)** - Architecture diagrams
 
-### `npm run build` fails to minify
+## 🧪 Testing
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+### Manual Testing
+
+**Guest User Flow:**
+1. Browse products
+2. Add to cart
+3. Checkout without login
+4. View order confirmation
+
+**Logged-In User Flow:**
+1. Register/Login
+2. Place order
+3. View order history
+
+**Admin Flow:**
+1. Login as admin
+2. Manage orders
+3. Manage products
+
+## 🔒 Security
+
+- Session-based authentication
+- httpOnly cookies
+- CORS configuration
+- Admin access control
+- Environment variables for secrets
+
+## 🛠️ Technologies Used
+
+### Backend
+- Node.js
+- Express.js
+- MongoDB + Mongoose
+- express-session
+- CORS
+
+### Frontend
+- React
+- React Router
+- Tailwind CSS
+- Fetch API
+
+## 📝 Environment Variables
+
+```env
+# Backend (.env)
+MONGO_URI=mongodb://...
+PORT=5000
+SESSION_SECRET=your_secret_key
+FRONTEND_URL=http://localhost:3000
+```
+
+## 🚀 Deployment
+
+### Backend
+1. Update environment variables
+2. Set `NODE_ENV=production`
+3. Use Redis for session store
+4. Enable secure cookies (HTTPS)
+
+### Frontend
+1. Build: `npm run build`
+2. Deploy build folder
+3. Update API URL in config
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 👥 Authors
+
+- Your Name - Initial work
+
+## 🙏 Acknowledgments
+
+- FakeStore API for sample products
+- Tailwind CSS for styling
+- MongoDB for database
+
+## 📞 Support
+
+For issues and questions:
+- Check the documentation files
+- Review the troubleshooting section in SETUP_GUIDE.md
+- Open an issue on GitHub
+
+## 🎉 Version History
+
+### v2.0.0 (Current)
+- ✅ MVC architecture implemented
+- ✅ Session management added
+- ✅ Guest checkout enabled
+- ✅ Comprehensive documentation
+
+### v1.0.0
+- Initial release
+- Basic e-commerce functionality
+
+---
+
+**Built with ❤️ using React and Node.js**
+
+**Ready to start?** Check out [QUICK_START.md](QUICK_START.md)!

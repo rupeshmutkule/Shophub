@@ -5,16 +5,37 @@ function YourOrders({ user }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setOrders([]);
-      setLoading(false);
-      return;
-    }
-
+    console.log('=== YOUR ORDERS DEBUG ===');
+    console.log('User prop:', user);
+    
     setLoading(true);
-    fetch(`${API_BASE_URL}/api/orders?email=${user.email}`)
-      .then(res => res.json())
+    
+    // Build URL with email query param if user is logged in
+    let url = `${API_BASE_URL}/api/orders`;
+    if (user && user.email) {
+      url += `?email=${encodeURIComponent(user.email)}`;
+      console.log('Logged-in user, fetching by email:', user.email);
+    } else {
+      console.log('Guest user, fetching by session');
+    }
+    
+    console.log('Fetching orders from:', url);
+    
+    // Fetch orders - backend will use email or session to determine which orders to show
+    fetch(url, {
+      credentials: 'include' // Include session cookies
+    })
+      .then(res => {
+        console.log('Response status:', res.status);
+        return res.json();
+      })
       .then(data => {
+        console.log('Orders received:', data);
+        console.log('Number of orders:', data.length);
+        if (data.length > 0) {
+          console.log('First order:', data[0]);
+        }
+        console.log('========================\n');
         setOrders(data);
         setLoading(false);
       })
@@ -27,7 +48,10 @@ function YourOrders({ user }) {
   const handleCancel = (id) => {
     if (!window.confirm("Are you sure you want to cancel this order?")) return;
 
-    fetch(`${API_BASE_URL}/api/orders/${id}`, { method: 'DELETE' })
+    fetch(`${API_BASE_URL}/api/orders/${id}`, { 
+      method: 'DELETE',
+      credentials: 'include' // Include session cookies
+    })
       .then(res => {
         if (res.ok) {
            setOrders(orders.filter(o => o._id !== id));
@@ -48,7 +72,10 @@ function YourOrders({ user }) {
         
         {orders.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-            You haven't placed any orders yet.
+            <p className="mb-4">You haven't placed any orders yet.</p>
+            <a href="/" className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+              Start Shopping
+            </a>
           </div>
         ) : (
           <div className="space-y-6">

@@ -53,6 +53,7 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
         const response = await fetch(`${API_BASE_URL}/api/orders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', // Include session cookies
             body: JSON.stringify(orderData)
         });
 
@@ -103,15 +104,15 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
                     <input name="fullName" required onChange={handleChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="John Doe" />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                     <input 
                       type="email" 
                       name="email"
                       value={formData.email}
                       onChange={handleChange}
                       required 
-                      readOnly
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed outline-none transition-all duration-300"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                      placeholder="your@email.com"
                     />
                   </div>
                 </div>

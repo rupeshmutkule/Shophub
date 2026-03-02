@@ -10,7 +10,9 @@ function AdminOrders() {
   }, []);
 
   const fetchOrders = () => {
-    fetch(`${API_BASE_URL}/api/orders`)
+    fetch(`${API_BASE_URL}/api/orders`, {
+      credentials: 'include' // Include session cookies
+    })
       .then(res => res.json())
       .then(data => {
         setOrders(data);
@@ -26,7 +28,8 @@ function AdminOrders() {
     if (!window.confirm("PERMANENTLY DELETE this order from the database? This cannot be undone.")) return;
 
     fetch(`${API_BASE_URL}/api/orders/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      credentials: 'include' // Include session cookies
     })
       .then(res => {
         if (res.ok) {
@@ -45,8 +48,9 @@ function AdminOrders() {
     fetch(`${API_BASE_URL}/api/orders/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // Include session cookies
       body: JSON.stringify({ status: 'accepted' })
-    })
+    }) 
       .then(res => res.json())
       .then(() => {
         alert("Order accepted!");
@@ -58,9 +62,10 @@ function AdminOrders() {
   const handleReject = (id) => {
     if (!window.confirm("Reject and remove this order? This will also remove it from the customer's order page.")) return;
 
-    fetch(` ${API_BASE_URL}/api/orders/${id}/status`, {
+    fetch(`${API_BASE_URL}/api/orders/${id}/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // Include session cookies
       body: JSON.stringify({ status: 'rejected' })
     })
       .then(res => {

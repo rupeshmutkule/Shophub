@@ -6,10 +6,10 @@ import API_BASE_URL from "./config/api";
 import Home from "./Pages/Home";
 import Login from "./Pages/Login";
 import Signup from "./Pages/Signup";
-import Products from "./Pages/Products";
-import Carts from "./Pages/Carts";
+import Carts from "./Pages/Carts";  
 import Contact from "./Pages/Contact";
 import Terms from "./Pages/Terms";
+import Products from "./Pages/Products";
 import AddProduct from "./Pages/AddProduct";
 import PlaceOrder from "./Pages/PlaceOrder";
 import Proceed from "./Pages/Proceed";
@@ -20,7 +20,7 @@ import YourOrders from "./Pages/YourOrders";
 
 function App() {
   const [user, setUser] = useState(() => {
-    try {
+    try { 
       return JSON.parse(localStorage.getItem('user'));
     } catch (e) {
       return null;
@@ -42,14 +42,19 @@ function App() {
   const [products, setProducts] = useState([]);
   const navigate = useNavigate();
 
-  const handleLogin = (userData) => {
+  const handleLogin = (userData, token) => {
+    // Store user data and JWT token
     localStorage.setItem('user', JSON.stringify(userData));
+    if (token) {
+      localStorage.setItem('token', token);
+    }
     setUser(userData);
     navigate('/');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     setUser(null);
     clearAllCarts(); // Optional: clear from state
     navigate('/login');
@@ -68,28 +73,21 @@ function App() {
   }, []);
 
   const handleAddProduct = (newProduct) => {
-     // NOTE: We now assume AddProduct page handles the API POST. 
-     // We can just refresh state or optimize by appending.
-     // For now, let's append loosely, but ideally we re-fetch or the AddProduct page redirects to Home which re-fetches if logic was moved there.
-     // Let's just append:
-     setProducts([...products, { ...newProduct, id: Date.now() }]); 
-     // The better way is to refetch, but let's keep it snappy.
+     
+     setProducts([...products, { ...newProduct, _id: newProduct._id || Date.now() }]); 
+    
      navigate("/"); 
   };
 
   const [cart, setCart] = useState([]);
   const isInitialLoad = useRef(true);
 
-  // Load user-specific cart when user changes
+  // Load cart from localStorage on mount (guest or user-specific)
   useEffect(() => {
-    if (user && user.email) {
-      const savedCart = localStorage.getItem(`cart_${user.email}`);
-      setCart(savedCart ? JSON.parse(savedCart) : []);
-    } else {
-      setCart([]);
-    }
-    // Set flag to allow saving after the load is configured
-    isInitialLoad.current = true; 
+    const cartKey = user && user.email ? `cart_${user.email}` : 'cart_guest';
+    const savedCart = localStorage.getItem(cartKey);
+    setCart(savedCart ? JSON.parse(savedCart) : []);
+    isInitialLoad.current = true;
   }, [user]);
 
   // Persist cart when it changes
@@ -99,26 +97,19 @@ function App() {
       return;
     }
 
-    if (user && user.email) {
-      localStorage.setItem(`cart_${user.email}`, JSON.stringify(cart));
-    }
+    const cartKey = user && user.email ? `cart_${user.email}` : 'cart_guest';
+    localStorage.setItem(cartKey, JSON.stringify(cart));
   }, [cart, user]);
 
   const handleAddToCart = (product) => {
-    if (!user) {
-      alert("Please login to add items to cart.");
-      navigate('/login');
-      return;
-    }
     setCart(prevCart => [...prevCart, product]);
     alert(`${product.name} added to cart!`);
   };
 
   const handlePlaceOrder = () => {
     setCart([]); // Clear cart after order
-    if (user && user.email) {
-      localStorage.removeItem(`cart_${user.email}`);
-    }
+    const cartKey = user && user.email ? `cart_${user.email}` : 'cart_guest';
+    localStorage.removeItem(cartKey);
   };
 
   const refreshProducts = () => {

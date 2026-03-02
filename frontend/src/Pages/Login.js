@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import API_BASE_URL from "../config/api";
 
 function Login({ onLogin }) {
-  const [identifier, setIdentifier] = useState(''); // Email or phone
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loginFailed, setLoginFailed] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   // Forgot password states
   const [fpIdentifier, setFpIdentifier] = useState('');
@@ -14,12 +15,13 @@ function Login({ onLogin }) {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    console.log("Submitting login:", { identifier, password });
+    setLoading(true);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ identifier, password })
       });
 
@@ -28,7 +30,8 @@ function Login({ onLogin }) {
       if (response.ok) {
         alert('Login successful!');
         setLoginFailed(false);
-        if (onLogin) onLogin(data.user);
+        // Pass both user data and token to parent
+        if (onLogin) onLogin(data.user, data.token);
       } else {
         console.error("Login rejected:", data);
         setLoginFailed(true);
@@ -38,6 +41,8 @@ function Login({ onLogin }) {
       console.error("Login Network Error:", err);
       setLoginFailed(true);
       alert('Failed to connect to server');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +53,13 @@ function Login({ onLogin }) {
       alert("Passwords don't match!");
       return;
     }
+
+    if (fpNewPassword.length < 6 || fpNewPassword.length > 14) {
+      alert("Password must be between 6-14 characters");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/direct-reset-password`, {
@@ -70,6 +82,8 @@ function Login({ onLogin }) {
     } catch (err) {
       console.error("Reset Error:", err);
       alert('Failed to update password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,9 +135,10 @@ function Login({ onLogin }) {
 
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition duration-200 shadow-lg hover:shadow-xl"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Login
+              {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
 
@@ -148,7 +163,7 @@ function Login({ onLogin }) {
         </div>
       </div>
 
-      {/* Simplified Forgot Password Modal (No OTP) */}
+      {/* Forgot Password Modal */}
       {showForgotPassword && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative">
@@ -184,8 +199,10 @@ function Login({ onLogin }) {
                     value={fpNewPassword}
                     onChange={(e) => setFpNewPassword(e.target.value)}
                     required
+                    minLength="6"
+                    maxLength="14"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Min. 6 characters"
+                    placeholder="6-14 characters"
                   />
                 </div>
                 <div>
@@ -199,8 +216,12 @@ function Login({ onLogin }) {
                     placeholder="Repeat new password"
                   />
                 </div>
-                <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-lg">
-                  Update Password
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Updating...' : 'Update Password'}
                 </button>
               </form>
             </div>

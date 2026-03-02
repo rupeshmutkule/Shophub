@@ -49,31 +49,47 @@ function Navbar({ cartCount = 0, user, onLogout }) {
               </span>
             </NavLink>
             
-            {user && user.userType === 'guest' && (
-              <NavLink to="/yourorders" className={linkClass}>
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  Your Orders
-                </span>
-              </NavLink>
-            )}
+            {/* Show Your Orders for all users (guest and logged-in) */}
+            <NavLink to="/yourorders" className={linkClass}>
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Your Orders
+              </span>
+            </NavLink>
             
-            {user && (
-              <NavLink to="/contact" className={linkClass}>
-                <span className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Contact
-                </span>
-              </NavLink>
-            )}
+            {/* Show Contact for all users */}
+            <NavLink to="/contact" className={linkClass}>
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Contact
+              </span>
+            </NavLink>
           </div>
 
           {/* Right Actions */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Cart Link - Show for all users (guest and logged-in non-host) */}
+            {(!user || user.userType !== 'host') && (
+              <NavLink 
+                to="/carts" 
+                className="relative px-4 py-2 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Cart
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg animate-pulse">
+                    {cartCount}
+                  </span>
+                )}
+              </NavLink>
+            )}
+
             {!user ? (
               <div className="flex items-center gap-3">
                 <NavLink 
@@ -125,24 +141,6 @@ function Navbar({ cartCount = 0, user, onLogout }) {
                       Orders
                     </NavLink>
                   </div>
-                )}
-
-                {/* Guest Cart Link */}
-                {user.userType === 'guest' && (
-                  <NavLink 
-                    to="/carts" 
-                    className="relative px-4 py-2 text-sm font-bold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg flex items-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Cart
-                    {cartCount > 0 && (
-                      <span className="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-lg animate-pulse">
-                        {cartCount}
-                      </span>
-                    )}
-                  </NavLink>
                 )}
 
                 {/* User Info & Logout */}
@@ -211,20 +209,19 @@ function Navbar({ cartCount = 0, user, onLogout }) {
               </span>
             </NavLink>
             
-            {user && (
-              <NavLink 
-                to="/contact" 
-                className={mobileLinkClass} 
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <span className="flex items-center gap-3">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Contact
-                </span>
-              </NavLink>
-            )}
+            {/* Show Contact for all users */}
+            <NavLink 
+              to="/contact" 
+              className={mobileLinkClass} 
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <span className="flex items-center gap-3">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Contact
+              </span>
+            </NavLink>
 
             {user && user.userType === 'host' && (
               <>
@@ -267,43 +264,6 @@ function Navbar({ cartCount = 0, user, onLogout }) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
                     Orders Panel
-                  </span>
-                </NavLink>
-              </>
-            )}
-
-            {user && user.userType === 'guest' && (
-              <>
-                <NavLink 
-                  to="/yourorders" 
-                  className={mobileLinkClass} 
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <span className="flex items-center gap-3">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    Your Orders
-                  </span>
-                </NavLink>
-                
-                <NavLink 
-                  to="/carts" 
-                  className={mobileLinkClass} 
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <span className="flex items-center justify-between">
-                    <span className="flex items-center gap-3">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                      Cart
-                    </span>
-                    {cartCount > 0 && (
-                      <span className="flex items-center justify-center w-7 h-7 text-xs font-bold text-white bg-gradient-to-r from-red-500 to-pink-600 rounded-full shadow-md">
-                        {cartCount}
-                      </span>
-                    )}
                   </span>
                 </NavLink>
               </>
