@@ -69,7 +69,13 @@ function AdminProducts() {
                         {products.map(product => (
                             <tr key={product._id} className="hover:bg-gray-50 transition">
                                 <td className="p-4 text-center">
-                                    <img src={product.photo} alt={product.name} className="w-12 h-12 object-cover rounded-md mx-auto bg-gray-200" />
+                                    <img 
+                                        src={product.photo} 
+                                        alt={product.name || 'Product image'}
+                                        width="48"
+                                        height="48"
+                                        className="w-12 h-12 object-cover rounded-md mx-auto bg-gray-200" 
+                                    />
                                 </td>
                                 <td className="p-4 font-medium text-gray-900 line-clamp-2 max-w-xs" title={product.name}>{product.name}</td>
                                 <td className="p-4 text-green-600 font-bold">${Number(product.price).toFixed(2)}</td>

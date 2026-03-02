@@ -16,42 +16,27 @@ function YourOrders({ user }) {
   };
 
   useEffect(() => {
-    console.log('=== YOUR ORDERS DEBUG ===');
-    console.log('User prop:', user);
-    
     setLoading(true);
     
     // Build URL with email query param if user is logged in
     let url = `${API_BASE_URL}/api/orders`;
     if (user && user.email) {
       url += `?email=${encodeURIComponent(user.email)}`;
-      console.log('Logged-in user, fetching by email:', user.email);
-    } else {
-      console.log('Guest user, fetching by session');
     }
-    
-    console.log('Fetching orders from:', url);
     
     // Fetch orders - backend will use email or session to determine which orders to show
     fetch(url, {
       credentials: 'include' // Include session cookies
     })
-      .then(res => {
-        console.log('Response status:', res.status);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        console.log('Orders received:', data);
-        console.log('Number of orders:', data.length);
-        if (data.length > 0) {
-          console.log('First order:', data[0]);
-        }
-        console.log('========================\n');
         setOrders(data);
         setLoading(false);
       })
       .catch(err => {
-        console.error("Error fetching orders:", err);
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Error fetching orders:", err);
+        }
         setLoading(false);
       });
   }, [user]);
@@ -74,7 +59,6 @@ function YourOrders({ user }) {
         }
       })
       .catch(err => {
-        console.error(err);
         showToast("Error cancelling order", "error");
       });
   };
@@ -137,7 +121,9 @@ function YourOrders({ user }) {
                            <div key={idx} className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg">
                              <img 
                                src={item.photo || 'https://via.placeholder.com/50?text=?'} 
-                               alt={item.name} 
+                               alt={item.name || 'Product image'}
+                               width="48"
+                               height="48"
                                className="w-12 h-12 object-cover rounded bg-gray-200"
                                onError={(e) => { e.target.src = 'https://via.placeholder.com/50?text=?'; }}
                              />

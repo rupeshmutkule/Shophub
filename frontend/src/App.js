@@ -43,7 +43,9 @@ function App() {
           }
         }
       } catch (err) {
-        console.error('Session check failed:', err);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Session check failed:', err);
+        }
       }
     };
     checkSession();
@@ -82,7 +84,9 @@ function App() {
         credentials: 'include'
       });
     } catch (err) {
-      console.error('Logout error:', err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Logout error:', err);
+      }
     }
     
     localStorage.removeItem('user');
@@ -101,7 +105,11 @@ function App() {
      fetch(`${API_BASE_URL}/api/products`)
        .then(res => res.json())
        .then(data => setProducts(data))
-       .catch(err => console.error("Error fetching products:", err));
+       .catch(err => {
+         if (process.env.NODE_ENV === 'development') {
+           console.error("Error fetching products:", err);
+         }
+       });
   }, []);
 
   const handleAddProduct = (newProduct) => {
@@ -148,7 +156,11 @@ function App() {
     fetch(`${API_BASE_URL}/api/products`)
       .then(res => res.json())
       .then(data => setProducts(data))
-      .catch(err => console.error("Error fetching products:", err));
+      .catch(err => {
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Error fetching products:", err);
+        }
+      });
   };
 
   return (

@@ -30,7 +30,9 @@ function AdminOrders() {
         setLoading(false);
       })
       .catch(err => {
-        console.error("Error fetching orders:", err);
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Error fetching orders:", err);
+        }
         setLoading(false);
       });
   };
@@ -53,7 +55,6 @@ function AdminOrders() {
         }
       })
       .catch(err => {
-        console.error(err);
         showToast("Error deleting order", "error");
       });
   };
@@ -78,7 +79,6 @@ function AdminOrders() {
         }
       })
       .catch(err => {
-        console.error(err);
         showToast("Error accepting order", "error");
       });
   };
@@ -103,7 +103,6 @@ function AdminOrders() {
         }
       })
       .catch(err => {
-        console.error(err);
         showToast("Error rejecting order", "error");
       });
   };
@@ -369,7 +368,9 @@ function AdminOrders() {
                             <div className="relative">
                               <img 
                                 src={item.photo || 'https://via.placeholder.com/100?text=Product'} 
-                                alt={item.name} 
+                                alt={item.name || 'Product image'}
+                                width="96"
+                                height="96"
                                 className="w-24 h-24 object-cover rounded-xl shadow-md"
                                 onError={(e) => { e.target.src = 'https://via.placeholder.com/100?text=?'; }}
                               />

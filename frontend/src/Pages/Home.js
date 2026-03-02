@@ -202,7 +202,9 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                 <div className="relative h-56 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                   <img
                     src={product.photo || 'https://via.placeholder.com/300?text=No+Image'}
-                    alt={product.name}
+                    alt={product.name || 'Product image'}
+                    width="300"
+                    height="224"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     onError={(e) => { e.target.src = 'https://via.placeholder.com/300?text=Error'; }}
                   />
