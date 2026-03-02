@@ -115,7 +115,7 @@ function YourOrders({ user }) {
                   </div>
                   <div className="flex items-center gap-4">
                     <p className="text-lg font-bold text-green-600">${Number(order.total || 0).toFixed(2)}</p>
-                    {order.status !== 'accepted' && (
+                    {order.status === 'pending' && (
                       <button 
                         onClick={() => handleCancel(order._id)}
                         className="text-sm text-red-600 hover:text-red-800 font-medium border border-red-200 px-3 py-1 rounded hover:bg-red-50 transition"

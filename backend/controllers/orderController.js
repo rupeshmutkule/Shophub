@@ -170,11 +170,7 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(403).json({ error: 'Admin or Host access required' });
     }
 
-    if (status === 'rejected') {
-      await Order.findByIdAndDelete(req.params.id);
-      return res.json({ message: 'Order rejected and removed' });
-    }
-
+    // Update order status (including rejected - don't delete)
     const updatedOrder = await Order.findByIdAndUpdate(
       req.params.id,
       { status },
@@ -185,6 +181,7 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
     
+    console.log(`✅ Order ${req.params.id} status updated to: ${status}`);
     res.json(updatedOrder);
   } catch (err) {
     res.status(500).json({ error: err.message });

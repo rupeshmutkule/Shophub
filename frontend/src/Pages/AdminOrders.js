@@ -84,7 +84,7 @@ function AdminOrders() {
   };
 
   const handleReject = (id) => {
-    if (!window.confirm("Reject and remove this order? This will also remove it from the customer's order page.")) return;
+    if (!window.confirm("Reject this order? The customer will still be able to see it as rejected.")) return;
 
     fetch(`${API_BASE_URL}/api/orders/${id}/status`, {
       method: 'PATCH',
@@ -94,8 +94,8 @@ function AdminOrders() {
     })
       .then(res => {
         if (res.ok) {
-          setOrders(orders.filter(o => o._id !== id));
-          showToast("Order rejected and removed", "success");
+          showToast("Order rejected", "success");
+          fetchOrders(); // Refresh orders to show updated status
         } else {
           return res.json().then(data => {
             showToast(data.error || "Failed to reject order", "error");
@@ -116,6 +116,7 @@ function AdminOrders() {
     total: orders.length,
     pending: orders.filter(o => o.status === 'pending').length,
     accepted: orders.filter(o => o.status === 'accepted').length,
+    rejected: orders.filter(o => o.status === 'rejected').length,
     totalRevenue: orders
       .filter(o => o.status === 'accepted')
       .reduce((sum, o) => sum + Number(o.total || 0), 0)
@@ -242,6 +243,16 @@ function AdminOrders() {
             }`}
           >
             Accepted ({stats.accepted})
+          </button>
+          <button
+            onClick={() => setFilterStatus('rejected')}
+            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
+              filterStatus === 'rejected'
+                ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            Rejected ({stats.rejected})
           </button>
         </div>
 
@@ -404,6 +415,20 @@ function AdminOrders() {
                         </svg>
                         Accept Order
                       </button>
+                    </div>
+                  )}
+
+                  {order.status === 'rejected' && (
+                    <div className="pt-6 border-t-2 border-gray-200">
+                      <div className="bg-gradient-to-r from-red-50 to-red-50 border-2 border-red-200 p-6 rounded-2xl text-center">
+                        <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                        <p className="text-xl font-bold text-red-800">Order Rejected</p>
+                        <p className="text-sm text-red-700 mt-2">This order has been declined</p>
+                      </div>
                     </div>
                   )}
 
