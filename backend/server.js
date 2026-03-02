@@ -18,10 +18,26 @@ const MONGO_URI = process.env.MONGO_URI;
 
 // ------------------ MIDDLEWARE ------------------
 // CORS must be configured BEFORE session middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://shophub-chi-rose.vercel.app',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true, // Allow cookies to be sent
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
@@ -38,10 +54,10 @@ app.use(session({
     ttl: 7 * 24 * 60 * 60, // 7 days in seconds
   }),
   cookie: {
-    secure: false, // Set to false for development (http://localhost)
+    secure: process.env.NODE_ENV === 'production', // true for HTTPS in production
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-    sameSite: 'lax', // 'lax' works for same-site requests in development
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site in production
   },
   name: 'shophub.sid', // Custom session cookie name
   rolling: true, // Reset maxAge on every request
