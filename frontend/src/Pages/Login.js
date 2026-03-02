@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import API_BASE_URL from "../config/api";
+import Toast from '../components/Toast';
 
 function Login({ onLogin }) {
   const [identifier, setIdentifier] = useState('');
@@ -7,11 +8,20 @@ function Login({ onLogin }) {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [loginFailed, setLoginFailed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
   
   // Forgot password states
   const [fpIdentifier, setFpIdentifier] = useState('');
   const [fpNewPassword, setFpNewPassword] = useState('');
   const [fpConfirmPassword, setFpConfirmPassword] = useState('');
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+  };
+
+  const closeToast = () => {
+    setToast(null);
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,19 +38,19 @@ function Login({ onLogin }) {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Login successful!');
+        showToast('Login successful!', 'success');
         setLoginFailed(false);
         // Pass both user data and token to parent
         if (onLogin) onLogin(data.user, data.token);
       } else {
         console.error("Login rejected:", data);
         setLoginFailed(true);
-        alert(data.error || 'Login failed');
+        showToast(data.error || 'Login failed', 'error');
       }
     } catch (err) {
       console.error("Login Network Error:", err);
       setLoginFailed(true);
-      alert('Failed to connect to server');
+      showToast('Failed to connect to server', 'error');
     } finally {
       setLoading(false);
     }
@@ -50,12 +60,12 @@ function Login({ onLogin }) {
     e.preventDefault();
     
     if (fpNewPassword !== fpConfirmPassword) {
-      alert("Passwords don't match!");
+      showToast("Passwords don't match!", 'error');
       return;
     }
 
     if (fpNewPassword.length < 6 || fpNewPassword.length > 14) {
-      alert("Password must be between 6-14 characters");
+      showToast("Password must be between 6-14 characters", 'warning');
       return;
     }
 
@@ -65,23 +75,24 @@ function Login({ onLogin }) {
       const response = await fetch(`${API_BASE_URL}/api/direct-reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ identifier: fpIdentifier, newPassword: fpNewPassword })
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        alert('Password updated successfully! You can now login.');
+        showToast('Password updated successfully! You can now login.', 'success');
         setShowForgotPassword(false);
         setFpIdentifier('');
         setFpNewPassword('');
         setFpConfirmPassword('');
       } else {
-        alert(data.error || 'Failed to update password');
+        showToast(data.error || 'Failed to update password', 'error');
       }
     } catch (err) {
       console.error("Reset Error:", err);
-      alert('Failed to update password');
+      showToast('Failed to update password', 'error');
     } finally {
       setLoading(false);
     }
@@ -89,6 +100,8 @@ function Login({ onLogin }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
+      
       <div className="max-w-md w-full">
         {/* Header */}
         <div className="text-center mb-8">

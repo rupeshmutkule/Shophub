@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from "../config/api";
+import Toast from '../components/Toast';
 
 function Signup() {
   const navigate = useNavigate();
@@ -18,6 +19,16 @@ function Signup() {
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [resendTimer, setResendTimer] = useState(0);
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+  };
+
+  const closeToast = () => {
+    setToast(null);
+  };
 
   const handleChange = (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -29,12 +40,12 @@ function Signup() {
 
   const handleSendOTP = async () => {
     if (!formData.email) {
-      alert("Please enter your email address");
+      showToast("Please enter your email address", "warning");
       return;
     }
 
     if (!formData.firstName || !formData.lastName) {
-      alert("Please enter your name");
+      showToast("Please enter your name", "warning");
       return;
     }
 
@@ -44,6 +55,7 @@ function Signup() {
       const response = await fetch(`${API_BASE_URL}/api/users/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           email: formData.email,
           firstName: formData.firstName,
@@ -55,38 +67,56 @@ function Signup() {
 
       if (response.ok) {
         setOtpSent(true);
-        alert('OTP sent to your email! Please check your inbox.');
+        showToast('OTP sent to your email! Please check your inbox.', 'success');
+        
+        // Start 60 second timer for resend
+        setResendTimer(60);
+        const interval = setInterval(() => {
+          setResendTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(interval);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
       } else {
-        alert(data.error || 'Failed to send OTP');
+        showToast(data.error || 'Failed to send OTP', 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Error connecting to server');
+      showToast('Error connecting to server', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResendOTP = () => {
+    setOtpSent(false);
+    setOtp('');
+    handleSendOTP();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
+      showToast("Passwords don't match!", "error");
       return;
     }
 
     if (formData.password.length < 6 || formData.password.length > 14) {
-      alert("Password must be between 6-14 characters");
+      showToast("Password must be between 6-14 characters", "warning");
       return;
     }
 
     if (!formData.termsAccepted) {
-      alert("Please accept the terms and conditions");
+      showToast("Please accept the terms and conditions", "warning");
       return;
     }
 
     if (!otp || otp.length !== 6) {
-      alert("Please enter the 6-digit OTP sent to your email");
+      showToast("Please enter the 6-digit OTP sent to your email", "warning");
       return;
     }
 
@@ -97,6 +127,7 @@ function Signup() {
       const verifyResponse = await fetch(`${API_BASE_URL}/api/users/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           email: formData.email,
           otp: otp
@@ -106,7 +137,7 @@ function Signup() {
       const verifyData = await verifyResponse.json();
 
       if (!verifyResponse.ok) {
-        alert(verifyData.error || 'Invalid OTP');
+        showToast(verifyData.error || 'Invalid OTP', 'error');
         setLoading(false);
         return;
       }
@@ -115,20 +146,21 @@ function Signup() {
       const signupResponse = await fetch(`${API_BASE_URL}/api/users/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ ...formData, otpVerified: true })
       });
 
       const signupData = await signupResponse.json();
 
       if (signupResponse.ok) {
-        alert('Account created successfully! Please login.');
-        navigate('/login');
+        showToast('Account created successfully! Redirecting to login...', 'success');
+        setTimeout(() => navigate('/login'), 2000);
       } else {
-        alert(signupData.error || 'Signup failed');
+        showToast(signupData.error || 'Signup failed', 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Error creating account');
+      showToast('Error creating account', 'error');
     } finally {
       setLoading(false);
     }
@@ -136,6 +168,8 @@ function Signup() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
+      
       <div className="max-w-md w-full">
         {/* Header */}
         <div className="text-center mb-8">
@@ -213,21 +247,33 @@ function Signup() {
               </p>
             </div>
 
-            {/* OTP Field */}
+            {/* OTP Field with Resend */}
             <div>
               <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-1">
                 Enter OTP <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                id="otp"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                required
-                maxLength="6"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition outline-none"
-                placeholder="Enter 6-digit OTP"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="otp"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                  maxLength="6"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition outline-none"
+                  placeholder="Enter 6-digit OTP"
+                />
+                {otpSent && (
+                  <button
+                    type="button"
+                    onClick={handleResendOTP}
+                    disabled={resendTimer > 0 || loading}
+                    className="px-4 py-2 text-sm bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Resend OTP'}
+                  </button>
+                )}
+              </div>
               <p className="text-xs text-gray-500 mt-1">Check your email for the OTP code</p>
             </div>
 
