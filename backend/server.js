@@ -70,7 +70,9 @@ app.use((req, res, next) => {
   console.log(`\n🔐 [${req.method}] ${req.path}`);
   console.log(`   Session ID: ${req.sessionID}`);
   console.log(`   User: ${req.session.user ? req.session.user.email : 'Guest'}`);
+  console.log(`   UserType: ${req.session.user ? req.session.user.userType : 'N/A'}`);
   console.log(`   Cookie: ${req.headers.cookie || 'No cookie'}`);
+  console.log(`   Origin: ${req.headers.origin || 'No origin'}`);
   next();
 });
 
@@ -92,8 +94,38 @@ app.get('/api/debug/session', (req, res) => {
     sessionID: req.sessionID,
     user: req.session.user || null,
     cookie: req.session.cookie,
-    sessionData: req.session
+    sessionData: req.session,
+    headers: {
+      cookie: req.headers.cookie,
+      origin: req.headers.origin,
+      referer: req.headers.referer
+    },
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      FRONTEND_URL: process.env.FRONTEND_URL
+    }
   });
+});
+
+// Debug endpoint to check all orders (no auth required for debugging)
+app.get('/api/debug/all-orders', async (req, res) => {
+  try {
+    const Order = (await import('./models/Order.js')).default;
+    const orders = await Order.find().sort({ createdAt: -1 });
+    res.json({
+      total: orders.length,
+      orders: orders.map(o => ({
+        id: o._id,
+        customer: o.customerName,
+        email: o.email,
+        total: o.total,
+        status: o.status,
+        createdAt: o.createdAt
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.use('/api/products', productRoutes);
