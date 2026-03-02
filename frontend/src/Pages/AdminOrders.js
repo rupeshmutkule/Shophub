@@ -1,9 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import API_BASE_URL from "../config/api";
+import Toast from '../components/Toast';
+
 function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+  };
+
+  const closeToast = () => {
+    setToast(null);
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -34,12 +45,17 @@ function AdminOrders() {
       .then(res => {
         if (res.ok) {
           setOrders(orders.filter(o => o._id !== id));
-          alert("Order permanently deleted.");
+          showToast("Order permanently deleted", "success");
         } else {
-          alert("Failed to delete order.");
+          return res.json().then(data => {
+            showToast(data.error || "Failed to delete order", "error");
+          });
         }
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error(err);
+        showToast("Error deleting order", "error");
+      });
   };
 
   const handleAccept = (id) => {
@@ -51,12 +67,20 @@ function AdminOrders() {
       credentials: 'include', // Include session cookies
       body: JSON.stringify({ status: 'accepted' })
     }) 
-      .then(res => res.json())
-      .then(() => {
-        alert("Order accepted!");
-        fetchOrders();
+      .then(res => {
+        if (res.ok) {
+          showToast("Order accepted!", "success");
+          fetchOrders();
+        } else {
+          return res.json().then(data => {
+            showToast(data.error || "Failed to accept order", "error");
+          });
+        }
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error(err);
+        showToast("Error accepting order", "error");
+      });
   };
 
   const handleReject = (id) => {
@@ -71,12 +95,17 @@ function AdminOrders() {
       .then(res => {
         if (res.ok) {
           setOrders(orders.filter(o => o._id !== id));
-          alert("Order rejected and removed.");
+          showToast("Order rejected and removed", "success");
         } else {
-          alert("Failed to reject order.");
+          return res.json().then(data => {
+            showToast(data.error || "Failed to reject order", "error");
+          });
         }
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error(err);
+        showToast("Error rejecting order", "error");
+      });
   };
 
   const filteredOrders = filterStatus === 'all' 
@@ -105,6 +134,8 @@ function AdminOrders() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
+      
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="mb-8">

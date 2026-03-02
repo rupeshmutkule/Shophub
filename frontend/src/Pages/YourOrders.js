@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import API_BASE_URL from "../config/api";
+import Toast from '../components/Toast';
+
 function YourOrders({ user }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'info') => {
+    setToast({ message, type });
+  };
+
+  const closeToast = () => {
+    setToast(null);
+  };
 
   useEffect(() => {
     console.log('=== YOUR ORDERS DEBUG ===');
@@ -55,18 +66,25 @@ function YourOrders({ user }) {
       .then(res => {
         if (res.ok) {
            setOrders(orders.filter(o => o._id !== id));
-           alert("Order cancelled successfully.");
+           showToast("Order cancelled successfully", "success");
         } else {
-           alert("Failed to cancel order.");
+           return res.json().then(data => {
+             showToast(data.error || "Failed to cancel order", "error");
+           });
         }
       })
-      .catch(err => console.error(err));
+      .catch(err => {
+        console.error(err);
+        showToast("Error cancelling order", "error");
+      });
   };
 
   if (loading) return <div className="text-center py-20">Loading orders...</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
+      {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
+      
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Your Orders</h1>
         

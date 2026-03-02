@@ -127,14 +127,27 @@ export const cancelOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     
+    console.log('=== CANCEL ORDER DEBUG ===');
+    console.log(`Order ID: ${req.params.id}`);
+    console.log(`Order found:`, order ? 'Yes' : 'No');
+    
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
     }
     
+    console.log(`Order email: ${order.email}`);
+    console.log(`Order sessionId: ${order.sessionId}`);
+    console.log(`Request sessionId: ${req.sessionID}`);
+    console.log(`Session user:`, req.session.user);
+    
     // Check if user has access to cancel this order
     const hasAccess = 
       order.sessionId === req.sessionID ||
-      (req.session.user && order.email === req.session.user.email);
+      (req.session.user && order.email === req.session.user.email) ||
+      (req.session.user && (req.session.user.userType === 'admin' || req.session.user.userType === 'host'));
+    
+    console.log(`Has access: ${hasAccess}`);
+    console.log('==========================\n');
     
     if (!hasAccess) {
       return res.status(403).json({ error: 'Access denied' });
@@ -143,6 +156,7 @@ export const cancelOrder = async (req, res) => {
     await Order.findByIdAndDelete(req.params.id);
     res.json({ message: 'Order cancelled successfully' });
   } catch (err) {
+    console.error('❌ Cancel order error:', err);
     res.status(500).json({ error: err.message });
   }
 };
