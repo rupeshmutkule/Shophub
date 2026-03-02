@@ -16,6 +16,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
+// Trust proxy - CRITICAL for Render/Heroku to work with secure cookies
+app.set('trust proxy', 1);
+
 // ------------------ MIDDLEWARE ------------------
 // CORS must be configured BEFORE session middleware
 const allowedOrigins = [
@@ -47,7 +50,7 @@ app.use(express.json());
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
   resave: false,
-  saveUninitialized: true, // Create session for all users (guest and logged-in)
+  saveUninitialized: false, // Don't create session until something stored (changed from true)
   store: MongoStore.create({
     mongoUrl: process.env.MONGO_URI,
     collectionName: 'sessions',
@@ -58,9 +61,11 @@ app.use(session({
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site in production
+    domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Let browser set domain
   },
   name: 'shophub.sid', // Custom session cookie name
   rolling: true, // Reset maxAge on every request
+  proxy: true, // Trust the reverse proxy for secure cookies
 }));
 
 app.use(requestLogger);
