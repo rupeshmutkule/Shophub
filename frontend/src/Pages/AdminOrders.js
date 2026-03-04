@@ -1,12 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import API_BASE_URL from "../config/api";
 import Toast from '../components/Toast';
+import authFetch from '../utils/authFetch';
+
+const STATUS_OPTIONS = [
+  'order_received',
+  'payment_verified',
+  'design_converted',
+  'pre_flight_approval',
+  'in_production',
+  'printed',
+  'quality_check',
+  'shipped',
+  'delivered',
+  'cancelled',
+  'rejected',
+  'refunded'
+];
+
+const normalizeStatus = (s) => {
+  if (!s) return 'order_received';
+  // Legacy statuses (older UI/backend)
+  if (s === 'pending') return 'order_received';
+  if (s === 'accepted') return 'payment_verified';
+  return s;
+};
+
+const statusLabel = (s) => normalizeStatus(s).replaceAll('_', ' ').toUpperCase();
 
 function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
   const [toast, setToast] = useState(null);
+  const [cancelModal, setCancelModal] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [imageModal, setImageModal] = useState(null);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -21,12 +49,10 @@ function AdminOrders() {
   }, []);
 
   const fetchOrders = () => {
-    fetch(`${API_BASE_URL}/api/orders`, {
-      credentials: 'include' // Include session cookies
-    })
+    authFetch(`/api/orders`)
       .then(res => res.json())
       .then(data => {
-        setOrders(data);
+        setOrders(Array.isArray(data) ? data : []);
         setLoading(false);
       })
       .catch(err => {
@@ -40,9 +66,8 @@ function AdminOrders() {
   const handlePermanentDelete = (id) => {
     if (!window.confirm("PERMANENTLY DELETE this order from the database? This cannot be undone.")) return;
 
-    fetch(`${API_BASE_URL}/api/orders/${id}`, {
+    authFetch(`/api/orders/${id}`, {
       method: 'DELETE',
-      credentials: 'include' // Include session cookies
     })
       .then(res => {
         if (res.ok) {
@@ -59,66 +84,75 @@ function AdminOrders() {
       });
   };
 
-  const handleAccept = (id) => {
-    if (!window.confirm("Accept this order?")) return;
+  const handleCancelOrder = (id) => {
+    setCancelModal(id);
+    setCancelReason('');
+  };
 
-    fetch(`${API_BASE_URL}/api/orders/${id}/status`, {
+  const submitCancellation = () => {
+    if (!cancelModal) return;
+    
+    if (!cancelReason.trim()) {
+      showToast("Please provide a reason for cancellation", "error");
+      return;
+    }
+
+    authFetch(`/api/orders/${cancelModal}/admin-cancel`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // Include session cookies
-      body: JSON.stringify({ status: 'accepted' })
-    }) 
-      .then(res => {
+      body: JSON.stringify({ 
+        cancellationReason: cancelReason,
+        cancelledBy: 'admin'
+      })
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          showToast(data.error || "Failed to cancel order", "error");
+        } else {
+          showToast("Order cancelled successfully", "success");
+          setCancelModal(null);
+          setCancelReason('');
+          fetchOrders(); // Refresh orders
+        }
+      })
+      .catch(err => {
+        console.error('Cancel error:', err);
+        showToast("Error cancelling order", "error");
+      });
+  };
+
+  const handleUpdateStatus = (id, status) => {
+    authFetch(`/api/orders/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
-          showToast("Order accepted!", "success");
+          showToast(`Order status updated to ${statusLabel(status)}`, "success");
           fetchOrders();
         } else {
-          return res.json().then(data => {
-            showToast(data.error || "Failed to accept order", "error");
-          });
+          showToast(data.error || "Failed to update status", "error");
         }
       })
-      .catch(err => {
-        showToast("Error accepting order", "error");
-      });
+      .catch(() => showToast("Error updating status", "error"));
   };
 
-  const handleReject = (id) => {
-    if (!window.confirm("Reject this order? The customer will still be able to see it as rejected.")) return;
-
-    fetch(`${API_BASE_URL}/api/orders/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // Include session cookies
-      body: JSON.stringify({ status: 'rejected' })
-    })
-      .then(res => {
-        if (res.ok) {
-          showToast("Order rejected", "success");
-          fetchOrders(); // Refresh orders to show updated status
-        } else {
-          return res.json().then(data => {
-            showToast(data.error || "Failed to reject order", "error");
-          });
-        }
-      })
-      .catch(err => {
-        showToast("Error rejecting order", "error");
-      });
-  };
-
-  const filteredOrders = filterStatus === 'all' 
-    ? orders 
-    : orders.filter(order => order.status === filterStatus);
+  const filteredOrders = filterStatus === 'all'
+    ? orders
+    : orders.filter(order => normalizeStatus(order.status) === filterStatus);
 
   const stats = {
     total: orders.length,
-    pending: orders.filter(o => o.status === 'pending').length,
-    accepted: orders.filter(o => o.status === 'accepted').length,
-    rejected: orders.filter(o => o.status === 'rejected').length,
+    order_received: orders.filter(o => normalizeStatus(o.status) === 'order_received').length,
+    in_production: orders.filter(o => normalizeStatus(o.status) === 'in_production').length,
+    shipped: orders.filter(o => normalizeStatus(o.status) === 'shipped').length,
+    delivered: orders.filter(o => normalizeStatus(o.status) === 'delivered').length,
     totalRevenue: orders
-      .filter(o => o.status === 'accepted')
-      .reduce((sum, o) => sum + Number(o.total || 0), 0)
+      .filter(o => (o.payment?.status === 'paid' || o.payment?.status === 'partially_refunded'))
+      .reduce((sum, o) => sum + Number(o.payment?.amount ?? o.total ?? 0), 0)
   };
 
   if (loading) {
@@ -171,8 +205,8 @@ function AdminOrders() {
           <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-yellow-500 transform hover:scale-105 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Pending</p>
-                <p className="text-3xl font-extrabold text-gray-900 mt-2">{stats.pending}</p>
+                <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Order Received</p>
+                <p className="text-3xl font-extrabold text-gray-900 mt-2">{stats.order_received}</p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center">
                 <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,12 +219,12 @@ function AdminOrders() {
           <div className="bg-white rounded-2xl shadow-lg p-6 border-l-4 border-green-600 transform hover:scale-105 transition-all duration-300">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Accepted</p>
-                <p className="text-3xl font-extrabold text-gray-900 mt-2">{stats.accepted}</p>
+                <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">In Production</p>
+                <p className="text-3xl font-extrabold text-gray-900 mt-2">{stats.in_production}</p>
               </div>
               <div className="w-14 h-14 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
                 <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h2M7 7h10M7 11h4" />
                 </svg>
               </div>
             </div>
@@ -200,7 +234,7 @@ function AdminOrders() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-indigo-100 uppercase tracking-wide">Revenue</p>
-                <p className="text-3xl font-extrabold text-white mt-2">${stats.totalRevenue.toFixed(2)}</p>
+                <p className="text-3xl font-extrabold text-white mt-2">₹{stats.totalRevenue.toFixed(2)}</p>
               </div>
               <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -212,7 +246,7 @@ function AdminOrders() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="bg-white rounded-2xl shadow-lg p-2 mb-8 inline-flex gap-2">
+        <div className="bg-white rounded-2xl shadow-lg p-2 mb-8 inline-flex gap-2 flex-wrap">
           <button
             onClick={() => setFilterStatus('all')}
             className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
@@ -224,34 +258,44 @@ function AdminOrders() {
             All Orders ({orders.length})
           </button>
           <button
-            onClick={() => setFilterStatus('pending')}
+            onClick={() => setFilterStatus('order_received')}
             className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              filterStatus === 'pending'
+              filterStatus === 'order_received'
                 ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-md'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Pending ({stats.pending})
+            Order Received ({stats.order_received})
           </button>
           <button
-            onClick={() => setFilterStatus('accepted')}
+            onClick={() => setFilterStatus('in_production')}
             className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              filterStatus === 'accepted'
+              filterStatus === 'in_production'
                 ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Accepted ({stats.accepted})
+            In Production ({stats.in_production})
           </button>
           <button
-            onClick={() => setFilterStatus('rejected')}
+            onClick={() => setFilterStatus('shipped')}
             className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              filterStatus === 'rejected'
-                ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-md'
+              filterStatus === 'shipped'
+                ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-md'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            Rejected ({stats.rejected})
+            Shipped ({stats.shipped})
+          </button>
+          <button
+            onClick={() => setFilterStatus('cancelled')}
+            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
+              filterStatus === 'cancelled'
+                ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            Cancelled ({orders.filter(o => normalizeStatus(o.status) === 'cancelled').length})
           </button>
         </div>
 
@@ -275,10 +319,16 @@ function AdminOrders() {
             {filteredOrders.map((order) => (
               <div 
                 key={order._id} 
-                className="bg-white rounded-3xl shadow-xl overflow-hidden border-2 border-gray-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                className={`bg-white rounded-3xl shadow-xl overflow-hidden border-2 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 ${
+                  order.status === 'cancelled' ? 'border-red-300 opacity-75' : 'border-gray-100'
+                }`}
               >
                 {/* Order Header */}
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6">
+                <div className={`px-8 py-6 ${
+                  order.status === 'cancelled' 
+                    ? 'bg-gradient-to-r from-red-600 to-red-700' 
+                    : 'bg-gradient-to-r from-indigo-600 to-purple-600'
+                }`}>
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
@@ -305,17 +355,9 @@ function AdminOrders() {
                         <p className="text-sm font-semibold text-indigo-100">Total Amount</p>
                         <p className="text-4xl font-extrabold text-white">${Number(order.total || 0).toFixed(2)}</p>
                       </div>
-                      <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold shadow-lg ${
-                        order.status === 'accepted' 
-                          ? 'bg-green-500 text-white' 
-                          : order.status === 'pending' 
-                          ? 'bg-yellow-400 text-yellow-900' 
-                          : 'bg-red-500 text-white'
-                      }`}>
-                        {order.status === 'accepted' && '✅ '}
-                        {order.status === 'pending' && '⏳ '}
-                        {order.status === 'rejected' && '❌ '}
-                        {order.status.toUpperCase()}
+                      <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold shadow-lg bg-white/20 text-white">
+                        {order.status === 'cancelled' && '❌ '}
+                        {statusLabel(order.status)}
                       </span>
                     </div>
                   </div>
@@ -350,6 +392,32 @@ function AdminOrders() {
                     </div>
                   </div>
 
+                  {/* Cancellation Reason (if cancelled) */}
+                  {order.status === 'cancelled' && order.cancellationReason && (
+                    <div className="mb-8">
+                      <div className="flex items-center gap-2 mb-4">
+                        <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h4 className="text-xl font-bold text-gray-900">Cancellation Reason</h4>
+                      </div>
+                      <div className="bg-gradient-to-br from-red-50 to-orange-50 p-6 rounded-2xl border-2 border-red-200">
+                        <p className="text-gray-800 font-medium italic">"{order.cancellationReason}"</p>
+                        {order.cancelledAt && (
+                          <p className="text-sm text-gray-600 mt-2">
+                            Cancelled on: {new Date(order.cancelledAt).toLocaleDateString('en-US', { 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Order Items */}
                   {order.items && order.items.length > 0 && (
                     <div className="mb-8">
@@ -367,25 +435,60 @@ function AdminOrders() {
                           >
                             <div className="relative">
                               <img 
-                                src={item.photo || 'https://via.placeholder.com/100?text=Product'} 
-                                alt={item.name || 'Product image'}
+                                src={item.customizationPreview || item.customDesignUrl || item.photo || item.image || 'https://via.placeholder.com/100?text=Product'} 
+                                alt={item.name || item.title || 'Product image'}
                                 width="96"
                                 height="96"
-                                className="w-24 h-24 object-cover rounded-xl shadow-md"
+                                className="w-24 h-24 object-contain rounded-xl shadow-md bg-white cursor-pointer hover:scale-105 transition-transform"
+                                onClick={() => {
+                                  const imageUrl = item.customizationPreview || item.customDesignUrl || item.photo || item.image;
+                                  console.log('🖼️ Image clicked:', {
+                                    isCustomized: item.isCustomized,
+                                    hasCustomizationPreview: !!item.customizationPreview,
+                                    hasCustomDesignUrl: !!item.customDesignUrl,
+                                    imageUrl: imageUrl
+                                  });
+                                  if (imageUrl) {
+                                    setImageModal(imageUrl);
+                                  }
+                                }}
                                 onError={(e) => { e.target.src = 'https://via.placeholder.com/100?text=?'; }}
                               />
                               <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-lg">
                                 {idx + 1}
                               </div>
+                              {item.isCustomized && (
+                                <div className="absolute -bottom-2 -left-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                                  CUSTOM
+                                </div>
+                              )}
                             </div>
                             <div className="flex-1">
-                              <h5 className="text-lg font-bold text-gray-900 mb-2">{item.name}</h5>
+                              <div className="flex items-center gap-2 mb-2">
+                                <h5 className="text-lg font-bold text-gray-900">{item.name || item.title || 'Product'}</h5>
+                                {item.isCustomized && (
+                                  <span className="inline-flex items-center bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full border border-purple-200">
+                                    ✨ Customized Product
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                                 {item.description || 'No description available'}
                               </p>
+                              {item.isCustomized && (item.customizationPreview || item.customDesignUrl) && (
+                                <div className="mb-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                  <p className="text-xs font-bold text-purple-700 mb-1">🎨 Customer Design Preview:</p>
+                                  <button
+                                    onClick={() => setImageModal(item.customizationPreview || item.customDesignUrl)}
+                                    className="text-xs text-indigo-600 hover:text-indigo-800 underline font-semibold"
+                                  >
+                                    Click to View Full Design →
+                                  </button>
+                                </div>
+                              )}
                               <div className="flex items-center gap-2">
                                 <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                                  ${Number(item.price).toFixed(2)}
+                                  ${Number(item.price || 0).toFixed(2)}
                                 </span>
                               </div>
                             </div>
@@ -395,45 +498,45 @@ function AdminOrders() {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
-                  {order.status === 'pending' && (
-                    <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t-2 border-gray-200">
-                      <button 
-                        onClick={() => handleReject(order._id)}
-                        className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold py-4 px-6 rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                  {/* Status update */}
+                  <div className="pt-6 border-t-2 border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="w-full sm:w-auto">
+                      <p className="text-sm font-bold text-gray-700 mb-2">Update workflow status</p>
+                      <select
+                        value={normalizeStatus(order.status)}
+                        onChange={(e) => handleUpdateStatus(order._id, e.target.value)}
+                        className="w-full sm:w-[320px] px-4 py-3 rounded-xl border-2 border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
                       >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        Reject Order
-                      </button>
-                      <button 
-                        onClick={() => handleAccept(order._id)}
-                        className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 px-6 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-2"
-                      >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Accept Order
-                      </button>
+                        {STATUS_OPTIONS.map((s) => (
+                          <option key={s} value={s}>
+                            {statusLabel(s)}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  )}
 
-                  {order.status === 'rejected' && (
-                    <div className="pt-6 border-t-2 border-gray-200">
-                      <div className="bg-gradient-to-r from-red-50 to-red-50 border-2 border-red-200 p-6 rounded-2xl text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-full sm:w-auto text-sm font-bold text-gray-600">
+                      Payment:{" "}
+                      <span className="text-indigo-700">
+                        {(order.payment?.status || "n/a").toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+                    <div className="flex gap-3">
+                      {order.status !== 'cancelled' && (
+                        <button 
+                          onClick={() => handleCancelOrder(order._id)}
+                          className="text-orange-600 hover:text-orange-800 font-bold text-sm flex items-center gap-1 transition-colors px-4 py-2 bg-orange-50 rounded-lg hover:bg-orange-100"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
-                        </div>
-                        <p className="text-xl font-bold text-red-800">Order Rejected</p>
-                        <p className="text-sm text-red-700 mt-2">This order has been declined</p>
-                      </div>
+                          Cancel Order
+                        </button>
+                      )}
                     </div>
-                  )}
-
-                  <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
                     <button 
                       onClick={() => handlePermanentDelete(order._id)}
                       className="text-red-500 hover:text-red-700 font-bold text-sm flex items-center gap-1 transition-colors"
@@ -445,25 +548,89 @@ function AdminOrders() {
                     </button>
                   </div>
 
-                  {order.status === 'accepted' && (
-                    <div className="pt-6 border-t-2 border-gray-200">
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 p-6 rounded-2xl text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                        <p className="text-xl font-bold text-green-800">Order Accepted Successfully</p>
-                        <p className="text-sm text-green-700 mt-2">This order has been confirmed and is being processed</p>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Image Modal */}
+      {imageModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setImageModal(null)}>
+          <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setImageModal(null)}
+              className="absolute -top-4 -right-4 bg-white text-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-100 transition z-10"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img 
+              src={imageModal} 
+              alt="Customization Preview" 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
+            <div className="mt-4 text-center">
+              <a 
+                href={imageModal} 
+                download="customization-design.png"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 transition"
+              >
+                Download for Printing
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Order Modal */}
+      {cancelModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+            <button
+              onClick={() => setCancelModal(null)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-2xl"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-extrabold text-gray-900 mb-2">Cancel Order (Admin)</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide a reason for cancelling this order. The customer will see this reason.
+            </p>
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Cancellation Reason *
+              </label>
+              <textarea
+                rows="4"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                placeholder="e.g., Out of stock, Unable to fulfill customization, Quality issues..."
+                required
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCancelModal(null)}
+                className="flex-1 px-4 py-2 text-sm font-bold rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={submitCancellation}
+                className="flex-1 px-4 py-2 text-sm font-bold rounded-xl bg-gradient-to-r from-orange-600 to-red-600 text-white hover:from-orange-700 hover:to-red-700 transition shadow-md hover:shadow-lg"
+              >
+                Cancel Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

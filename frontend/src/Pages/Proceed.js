@@ -168,13 +168,25 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
                 ) : (
                   cartItems.map((item, index) => (
                     <div key={index} className="flex gap-4 items-center">
-                      <img 
-                        src={item.photo || 'https://via.placeholder.com/60?text=Prod'} 
-                        alt={item.name} 
-                        className="w-16 h-16 rounded-md object-cover bg-gray-100"
-                      />
+                      <div className="relative">
+                        <img 
+                          src={item.customizationPreview || item.customDesignUrl || item.photo || 'https://via.placeholder.com/60?text=Prod'} 
+                          alt={item.name} 
+                          className="w-16 h-16 rounded-md object-contain bg-gray-100"
+                        />
+                        {item.isCustomized && (
+                          <div className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md">
+                            CUSTOM
+                          </div>
+                        )}
+                      </div>
                       <div className="flex-1">
                         <h4 className="text-sm font-bold text-gray-900 line-clamp-1">{item.name}</h4>
+                        {item.isCustomized && (
+                          <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            ✨ Customized
+                          </span>
+                        )}
                         <p className="text-xs text-gray-500">Qty: 1</p>
                       </div>
                       <span className="font-bold text-gray-900">${Number(item.price).toFixed(2)}</span>

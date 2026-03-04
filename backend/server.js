@@ -11,6 +11,9 @@ import productRoutes from './routes/productRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
+import adminDashboardRoutes from './routes/adminDashboardRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -44,7 +47,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-app.use(express.json());
+// Increase payload limit for base64 images (composite customizations)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Session middleware - CRITICAL: Must be after CORS
 app.use(session({
@@ -137,6 +142,9 @@ app.use('/api/products', productRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/admin/dashboard', adminDashboardRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Legacy route for seeding (keeping for backward compatibility)
 app.post('/api/seed', async (req, res) => {

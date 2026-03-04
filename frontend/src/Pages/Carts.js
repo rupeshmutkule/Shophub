@@ -23,14 +23,26 @@ function Carts({ cartItems = [] }) {
             <div className="space-y-4">
               {cartItems.map((item, index) => (
                 <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
-                  <img 
-                    src={item.photo || 'https://via.placeholder.com/100?text=Product'} 
-                    alt={item.name}
-                    className="w-24 h-24 object-cover rounded-lg bg-gray-100"
-                    onError={(e) => { e.target.src = 'https://via.placeholder.com/100?text=Error'; }}
-                  />
+                  <div className="relative">
+                    <img 
+                      src={item.customizationPreview || item.customDesignUrl || item.photo || 'https://via.placeholder.com/100?text=Product'} 
+                      alt={item.name}
+                      className="w-24 h-24 object-contain rounded-lg bg-gray-100"
+                      onError={(e) => { e.target.src = 'https://via.placeholder.com/100?text=Error'; }}
+                    />
+                    {item.isCustomized && (
+                      <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                        CUSTOMIZED
+                      </div>
+                    )}
+                  </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-gray-900">{item.name}</h3>
+                    {item.isCustomized && (
+                      <span className="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-full mb-1">
+                        ✨ Custom Design
+                      </span>
+                    )}
                     <p className="text-gray-500 text-sm line-clamp-1">{item.description}</p>
                     <div className="flex items-center gap-1 mt-1">
                       <span className="text-blue-600 font-bold">${Number(item.price).toFixed(2)}</span>

@@ -15,6 +15,10 @@ import PlaceOrder from "./Pages/PlaceOrder";
 import Proceed from "./Pages/Proceed";
 import AdminProducts from "./Pages/AdminProducts";
 import AdminOrders from "./Pages/AdminOrders";
+import AdminDashboard from "./Pages/AdminDashboard";
+import CategoryPage from "./Pages/CategoryPage";
+import ProductDetails from "./Pages/ProductDetails";
+import Customize from "./Pages/Customize";
 import EditProduct from "./Pages/EditProduct";
 import YourOrders from "./Pages/YourOrders";
 
@@ -173,15 +177,22 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/products" element={<Products />} />
         <Route path="/carts" element={<Carts cartItems={cart} />} />
+        <Route path="/cart" element={<Carts cartItems={cart} />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/addproduct" element={<AddProduct onAddProduct={handleAddProduct} />} />
         <Route path="/proceed" element={<Proceed cartItems={cart} onPlaceOrder={handlePlaceOrder} user={user} />} />
+        <Route path="/checkout" element={<Proceed cartItems={cart} onPlaceOrder={handlePlaceOrder} user={user} />} />
         <Route path="/placeorder" element={<PlaceOrder />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/orders" element={<AdminOrders />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/category/:name" element={<CategoryPage />} />
+        <Route path="/product/:id" element={<ProductDetails onAddToCart={handleAddToCart} />} />
+        <Route path="/customize/:id" element={<Customize onAddToCart={handleAddToCart} />} />
         <Route path="/editproduct/:id" element={<EditProduct />} />
         <Route path="/yourorders" element={<YourOrders user={user} />} />
+        <Route path="/account/orders" element={<YourOrders user={user} />} />
       </Routes>
     </>
   );

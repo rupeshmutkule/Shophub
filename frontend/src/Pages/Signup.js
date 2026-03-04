@@ -12,7 +12,7 @@ function Signup() {
     phone: '',
     password: '',
     confirmPassword: '',
-    userType: 'guest',
+    userType: 'user',
     termsAccepted: false,
     otpVerified: false
   });
@@ -337,23 +337,23 @@ function Signup() {
                 I am a... <span className="text-red-500">*</span>
               </label>
               <div className="flex gap-4">
-                <label className={`flex-1 cursor-pointer border rounded-lg p-3 text-center transition ${formData.userType === 'guest' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-blue-300'}`}>
+                <label className={`flex-1 cursor-pointer border rounded-lg p-3 text-center transition ${formData.userType === 'user' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-blue-300'}`}>
                   <input
                     type="radio"
                     name="userType"
-                    value="guest"
-                    checked={formData.userType === 'guest'}
+                    value="user"
+                    checked={formData.userType === 'user'}
                     onChange={handleChange}
                     className="sr-only"
                   />
                   <span className="font-medium">User</span>
                 </label>
-                <label className={`flex-1 cursor-pointer border rounded-lg p-3 text-center transition ${formData.userType === 'host' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-purple-300'}`}>
+                <label className={`flex-1 cursor-pointer border rounded-lg p-3 text-center transition ${formData.userType === 'agent' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-purple-300'}`}>
                   <input
                     type="radio"
                     name="userType"
-                    value="host"
-                    checked={formData.userType === 'host'}
+                    value="agent"
+                    checked={formData.userType === 'agent'}
                     onChange={handleChange}
                     className="sr-only"
                   />

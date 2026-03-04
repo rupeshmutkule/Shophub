@@ -2,8 +2,29 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom';
 import API_BASE_URL from "../config/api";
 
+const FAKESTORE_URL = "https://fakestoreapi.com/products?limit=50";
+
+const mapApiCategoryToStore = (apiCategory) => {
+  if (apiCategory === "men's clothing" || apiCategory === "women's clothing") return "t-shirts";
+  if (apiCategory === "electronics") return "tumblers";
+  if (apiCategory === "jewelery") return "glassware";
+  return "crockery";
+};
+
+const storeCategoryLabel = (name) => {
+  switch (name) {
+    case "t-shirts": return "T-Shirts";
+    case "tumblers": return "Tumblers";
+    case "glassware": return "Glassware";
+    case "crockery": return "Crockery";
+    default: return name;
+  }
+};
+
 function Home({ products = [], onAddToCart, user, onProductUpdate }) {
   const navigate = useNavigate();
+  const [fakeStoreProducts, setFakeStoreProducts] = React.useState([]);
+  const [loadingFake, setLoadingFake] = React.useState(true);
   const [showBuyModal, setShowBuyModal] = React.useState(false);
   const [showDetailsModal, setShowDetailsModal] = React.useState(false);
   const [showEditModal, setShowEditModal] = React.useState(false);
@@ -16,6 +37,11 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
 
   const handleBuyClick = (product, e) => {
     e.stopPropagation();
+    // For FakeStore products, go to customize page
+    if (product && product.id && !product._id) {
+      navigate(`/customize/${product.id}`, { state: { product } });
+      return;
+    }
     setSelectedProduct(product);
     setShowBuyModal(true);
   };
@@ -32,17 +58,28 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
 
   const handleCartClick = (product, e) => {
     e.stopPropagation();
-    onAddToCart(product);
+    if (!onAddToCart) return;
+    if (product && product.id && !product._id) {
+      onAddToCart({
+        name: product.title,
+        price: product.price,
+        rating: product.rating?.rate ?? 0,
+        photo: product.image,
+        description: product.description,
+        fakestoreId: product.id,
+      });
+    } else {
+      onAddToCart(product);
+    }
   };
 
   const handleCardClick = (product) => {
-    if (user && user.userType === 'host') {
-       setSelectedProduct(product);
-       setShowDetailsModal(true);
-    } else {
-       setSelectedProduct(product);
-       setShowDetailsModal(true);
+    if (product && product.id && !product._id) {
+      navigate(`/product/${product.id}`);
+      return;
     }
+    setSelectedProduct(product);
+    setShowDetailsModal(true);
   };
 
   const handleEditClick = (product, e) => {
@@ -153,6 +190,42 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
     }
   };
 
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoadingFake(true);
+      try {
+        const res = await fetch(FAKESTORE_URL);
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data)) {
+          setFakeStoreProducts(data);
+        }
+      } catch {
+        if (!cancelled) setFakeStoreProducts([]);
+      } finally {
+        if (!cancelled) setLoadingFake(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const byStoreCategory = React.useMemo(() => {
+    const grouped = {
+      "t-shirts": [],
+      tumblers: [],
+      glassware: [],
+      crockery: [],
+    };
+    fakeStoreProducts.forEach((p) => {
+      const key = mapApiCategoryToStore(p.category);
+      if (grouped[key]) grouped[key].push(p);
+    });
+    return grouped;
+  }, [fakeStoreProducts]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-7xl mx-auto">
@@ -172,40 +245,69 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
           </div>
         </div>
 
-        {/* Section Header */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">Latest Products</h2>
-          <div className="h-1 w-24 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full"></div>
-        </div>
-        
-        {products.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl shadow-lg border border-gray-100">
-            <div className="text-7xl mb-6 animate-bounce">🛍️</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-3">No products yet</h3>
-            <p className="text-gray-500 mb-8 text-lg">Start by adding some new products to your store.</p>
-            <a href="/addproduct" className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-full hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 font-semibold">
-              Add Your First Product
-            </a>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {products.map((product) => (
-              <div 
-                key={product._id || product.id} 
-                onClick={() => handleCardClick(product)}
-                className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer transform hover:-translate-y-2"
-              >
+        {/* Category Sections from FakeStore */}
+        {["t-shirts", "tumblers", "glassware", "crockery"].map((key) => {
+          const items = byStoreCategory[key] || [];
+          const limited = items.slice(0, 12);
+          return (
+            <section key={key} className="mb-12">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {storeCategoryLabel(key)}
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    Discover curated {storeCategoryLabel(key).toLowerCase()} from our catalog.
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate(`/category/${key}`)}
+                  className="px-4 py-2 text-sm font-bold rounded-xl bg-white border border-gray-200 text-gray-800 hover:border-indigo-500 hover:text-indigo-600 transition-all"
+                >
+                  View All
+                </button>
+              </div>
+
+              {loadingFake ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="bg-white rounded-2xl shadow animate-pulse p-4 h-64 flex flex-col"
+                    >
+                      <div className="bg-gray-200 rounded-xl h-32 mb-3" />
+                      <div className="bg-gray-200 h-4 mb-2 rounded" />
+                      <div className="bg-gray-200 h-4 mb-2 rounded w-2/3" />
+                      <div className="mt-auto flex gap-2">
+                        <div className="bg-gray-200 h-8 rounded flex-1" />
+                        <div className="bg-gray-200 h-8 rounded flex-1" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : limited.length === 0 ? (
+                <div className="bg-white rounded-2xl shadow p-6 text-gray-500 text-sm">
+                  No products available in this category yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {limited.map((product) => (
+                    <div 
+                      key={product.id} 
+                      onClick={() => handleCardClick(product)}
+                      className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer transform hover:-translate-y-2"
+                    >
                 {/* Gradient Overlay on Hover */}
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500 z-10 pointer-events-none"></div>
                 
                 {/* Product Image Container */}
                 <div className="relative h-56 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                   <img
-                    src={product.photo || 'https://via.placeholder.com/300?text=No+Image'}
-                    alt={product.name || 'Product image'}
+                    src={product.image || product.photo || 'https://via.placeholder.com/300?text=No+Image'}
+                    alt={product.title || product.name || 'Product image'}
                     width="300"
                     height="224"
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 p-4"
                     onError={(e) => { e.target.src = 'https://via.placeholder.com/300?text=Error'; }}
                   />
                   
@@ -217,7 +319,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                     <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
                       <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/>
                     </svg>
-                    <span>{product.rating}</span>
+                    <span>{typeof product.rating === 'object' ? (product.rating?.rate ?? 0) : (product.rating ?? 0)}</span>
                   </div>
 
                   {/* Quick View Badge */}
@@ -229,8 +331,8 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                 {/* Product Info */}
                 <div className="p-5 flex flex-col">
                   {/* Product Name */}
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1 group-hover:text-indigo-600 transition-colors duration-300" title={product.name}>
-                    {product.name}
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1 group-hover:text-indigo-600 transition-colors duration-300" title={product.title || product.name}>
+                    {product.title || product.name}
                   </h3>
                   
                   {/* Product Description */}
@@ -250,7 +352,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                     </div>
                     
                     {/* Action Buttons */}
-                    {user && user.userType === 'host' ? (
+                    {user && (user.userType === 'admin' || user.userType === 'host') ? (
                       <button 
                         onClick={(e) => handleEditClick(product, e)}
                         className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 px-4 rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-300 text-sm font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
@@ -282,9 +384,12 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
 
       {/* Product Details Modal */}
@@ -305,8 +410,8 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
             {/* Image Section */}
             <div className="w-full md:w-1/2 h-64 md:h-auto bg-gradient-to-br from-gray-50 to-gray-100 relative flex items-center justify-center">
                <img 
-                 src={selectedProduct.photo || 'https://via.placeholder.com/300?text=No+Image'} 
-                 alt={selectedProduct.name}
+                 src={selectedProduct.image || selectedProduct.photo || 'https://via.placeholder.com/300?text=No+Image'} 
+                 alt={selectedProduct.title || selectedProduct.name}
                  className="w-full h-full object-contain p-8"
                  onError={(e) => { e.target.src = 'https://via.placeholder.com/300?text=Error'; }}
                />
@@ -314,7 +419,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
 
             {/* Info Section */}
             <div className="w-full md:w-1/2 p-8 flex flex-col overflow-y-auto">
-               <h2 className="text-3xl font-bold text-gray-900 mb-3">{selectedProduct.name}</h2>
+               <h2 className="text-3xl font-bold text-gray-900 mb-3">{selectedProduct.title || selectedProduct.name}</h2>
                
                <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
                  <span className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
@@ -324,7 +429,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                    <svg className="w-4 h-4 fill-current mr-1" viewBox="0 0 20 20">
                      <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/>
                    </svg>
-                   {selectedProduct.rating}
+                   {typeof selectedProduct.rating === 'object' ? (selectedProduct.rating?.rate ?? 0) : (selectedProduct.rating ?? 0)}
                  </div>
                </div>
 
@@ -333,7 +438,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                  <p className="leading-relaxed">{selectedProduct.description}</p>
                </div>
 
-               {(!user || user.userType !== 'host') && (
+               {(!user || (user.userType !== 'admin' && user.userType !== 'host')) && (
                  <div className="grid grid-cols-2 gap-4 mt-auto">
                    <button 
                       onClick={(e) => handleCartClick(selectedProduct, e)}
@@ -474,7 +579,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
             </button>
 
             <div className="p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Buy {selectedProduct.name}</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Buy {selectedProduct.title || selectedProduct.name}</h3>
               <p className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-bold text-2xl mb-6">
                 ${Number(selectedProduct.price).toFixed(2)}
               </p>
