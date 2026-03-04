@@ -331,7 +331,7 @@ function Signup() {
               />
             </div>
 
-            {/* User Type Selection (Guest/Host) */}
+            {/* User Type Selection (User/Agent) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 I am a... <span className="text-red-500">*</span>
@@ -346,7 +346,7 @@ function Signup() {
                     onChange={handleChange}
                     className="sr-only"
                   />
-                  <span className="font-medium">Guest</span>
+                  <span className="font-medium">User</span>
                 </label>
                 <label className={`flex-1 cursor-pointer border rounded-lg p-3 text-center transition ${formData.userType === 'host' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 hover:border-purple-300'}`}>
                   <input
@@ -357,7 +357,7 @@ function Signup() {
                     onChange={handleChange}
                     className="sr-only"
                   />
-                  <span className="font-medium">Host</span>
+                  <span className="font-medium">Agent</span>
                 </label>
               </div>
             </div>
