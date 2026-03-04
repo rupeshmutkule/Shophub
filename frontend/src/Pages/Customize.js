@@ -8,23 +8,6 @@ const FAKESTORE_URL = "https://fakestoreapi.com/products";
 const CANVAS_W = 520;
 const CANVAS_H = 620;
 
-const TSHIRT_SVG = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" width="520" height="620" viewBox="0 0 520 620">
-  <defs>
-    <linearGradient id="g" x1="0" x2="1">
-      <stop offset="0" stop-color="#f3f4f6"/>
-      <stop offset="1" stop-color="#e5e7eb"/>
-    </linearGradient>
-    <filter id="s" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000" flood-opacity="0.12"/>
-    </filter>
-  </defs>
-  <rect width="520" height="620" fill="transparent"/>
-  <path filter="url(#s)" d="M160 90c20 34 52 54 100 54s80-20 100-54l70 34c10 5 14 17 9 27l-34 70c-5 10-17 14-27 9l-30-15v330c0 18-14 32-32 32H204c-18 0-32-14-32-32V224l-30 15c-10 5-22 1-27-9l-34-70c-5-10-1-22 9-27l70-34z" fill="url(#g)" stroke="#d1d5db" stroke-width="8" />
-  <path d="M210 92c10 22 26 36 50 36s40-14 50-36" fill="none" stroke="#d1d5db" stroke-width="10" stroke-linecap="round"/>
-</svg>
-`)}`;
-
 function Customize({ onAddToCart }) {
   const { id } = useParams();
   const navigate = useNavigate();
