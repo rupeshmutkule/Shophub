@@ -20,7 +20,13 @@ export const createOrder = async (req, res) => {
         price: orderData.items[0].price,
         isCustomized: orderData.items[0].isCustomized,
         hasCustomPreview: !!orderData.items[0].customizationPreview,
-        hasCustomDesignUrl: !!orderData.items[0].customDesignUrl
+        hasCustomDesignUrl: !!orderData.items[0].customDesignUrl,
+        hasFrontDesignUrl: !!orderData.items[0].frontDesignUrl,
+        hasBackDesignUrl: !!orderData.items[0].backDesignUrl
+      });
+      console.log(`🎨 DESIGN URLs:`, {
+        frontDesignUrl: orderData.items[0].frontDesignUrl || 'NOT PROVIDED',
+        backDesignUrl: orderData.items[0].backDesignUrl || 'NOT PROVIDED'
       });
     }
     console.log(`🍪 Cookie header: ${req.headers.cookie}`);
@@ -48,8 +54,13 @@ export const createOrder = async (req, res) => {
       console.log(`     * isCustomized: ${newOrder.items[0].isCustomized}`);
       console.log(`     * customizationPreview: ${newOrder.items[0].customizationPreview ? 'YES' : 'NO'}`);
       console.log(`     * customDesignUrl: ${newOrder.items[0].customDesignUrl ? 'YES' : 'NO'}`);
-      if (newOrder.items[0].customizationPreview) {
-        console.log(`     * Preview URL: ${newOrder.items[0].customizationPreview.substring(0, 50)}...`);
+      console.log(`     * frontDesignUrl: ${newOrder.items[0].frontDesignUrl ? 'YES' : 'NO'}`);
+      console.log(`     * backDesignUrl: ${newOrder.items[0].backDesignUrl ? 'YES' : 'NO'}`);
+      if (newOrder.items[0].frontDesignUrl) {
+        console.log(`     * Front URL: ${newOrder.items[0].frontDesignUrl.substring(0, 50)}...`);
+      }
+      if (newOrder.items[0].backDesignUrl) {
+        console.log(`     * Back URL: ${newOrder.items[0].backDesignUrl.substring(0, 50)}...`);
       }
     }
     console.log(`   - Session saved with lastOrderId: ${req.session.lastOrderId}`);

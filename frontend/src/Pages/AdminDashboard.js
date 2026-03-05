@@ -122,10 +122,10 @@ function AdminDashboard() {
           </div>
 
           {/* Recent orders */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 lg:col-span-2">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-extrabold text-gray-900">Recent Orders</h2>
-              <div className="text-sm font-bold text-gray-600">
+          <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:col-span-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+              <h2 className="text-lg sm:text-xl font-extrabold text-gray-900">Recent Orders</h2>
+              <div className="text-xs sm:text-sm font-bold text-gray-600">
                 Agent vs User:{" "}
                 <span className="text-indigo-700">
                   {pick(data?.salesByChannel, "agent", 0)} / {pick(data?.salesByChannel, "user", 0)}
@@ -136,72 +136,76 @@ function AdminDashboard() {
             {(!data?.recentOrders || data.recentOrders.length === 0) ? (
               <div className="text-center text-gray-500 py-10">No recent orders.</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-100 uppercase text-gray-600 text-xs font-semibold">
-                    <tr>
-                      <th className="p-3 border-b">Order</th>
-                      <th className="p-3 border-b">Customer</th>
-                      <th className="p-3 border-b">Channel</th>
-                      <th className="p-3 border-b">Status</th>
-                      <th className="p-3 border-b text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {data.recentOrders.map((o) => (
-                      <tr key={o._id} className="hover:bg-gray-50 transition">
-                        <td className="p-3 font-mono text-xs text-gray-700">{String(o._id).slice(-10)}</td>
-                        <td className="p-3">
-                          <div className="font-bold text-gray-900">{o.customerName || "-"}</div>
-                          <div className="text-xs text-gray-500">{o.email || "-"}</div>
-                        </td>
-                        <td className="p-3 text-sm font-bold text-gray-800">{(o.placedByType || "guest").toUpperCase()}</td>
-                        <td className="p-3 text-sm font-bold text-gray-800">{String(o.status || "").replaceAll("_", " ").toUpperCase()}</td>
-                        <td className="p-3 text-right font-extrabold text-gray-900">{formatMoney(o.total)}</td>
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-100 uppercase text-gray-600 text-xs font-semibold">
+                      <tr>
+                        <th className="p-2 sm:p-3 border-b whitespace-nowrap">Order</th>
+                        <th className="p-2 sm:p-3 border-b whitespace-nowrap">Customer</th>
+                        <th className="p-2 sm:p-3 border-b whitespace-nowrap">Channel</th>
+                        <th className="p-2 sm:p-3 border-b whitespace-nowrap">Status</th>
+                        <th className="p-2 sm:p-3 border-b text-right whitespace-nowrap">Total</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {data.recentOrders.map((o) => (
+                        <tr key={o._id} className="hover:bg-gray-50 transition">
+                          <td className="p-2 sm:p-3 font-mono text-xs text-gray-700">{String(o._id).slice(-10)}</td>
+                          <td className="p-2 sm:p-3">
+                            <div className="font-bold text-gray-900 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{o.customerName || "-"}</div>
+                            <div className="text-xs text-gray-500 truncate max-w-[120px] sm:max-w-none">{o.email || "-"}</div>
+                          </td>
+                          <td className="p-2 sm:p-3 text-xs sm:text-sm font-bold text-gray-800">{(o.placedByType || "guest").toUpperCase()}</td>
+                          <td className="p-2 sm:p-3 text-xs sm:text-sm font-bold text-gray-800 whitespace-nowrap">{String(o.status || "").replaceAll("_", " ").toUpperCase()}</td>
+                          <td className="p-2 sm:p-3 text-right font-extrabold text-gray-900 text-xs sm:text-sm whitespace-nowrap">{formatMoney(o.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
 
           {/* Low stock */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 lg:col-span-2">
-            <h2 className="text-xl font-extrabold text-gray-900 mb-4">Low Stock Alerts</h2>
+          <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:col-span-2">
+            <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 mb-4">Low Stock Alerts</h2>
             {(!data?.lowStockAlerts || data.lowStockAlerts.length === 0) ? (
               <div className="text-center text-gray-500 py-10">No low-stock variants.</div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-100 uppercase text-gray-600 text-xs font-semibold">
-                    <tr>
-                      <th className="p-3 border-b">Product</th>
-                      <th className="p-3 border-b">Variant</th>
-                      <th className="p-3 border-b text-right">Stock</th>
-                      <th className="p-3 border-b text-right">Threshold</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {data.lowStockAlerts.map((v, idx) => (
-                      <tr key={`${v.productId}-${v.sku || idx}`} className="hover:bg-gray-50 transition">
-                        <td className="p-3 font-bold text-gray-900">{v.productName}</td>
-                        <td className="p-3 text-sm text-gray-700">
-                          {[
-                            v.sku ? `SKU ${v.sku}` : null,
-                            v.size ? `Size ${v.size}` : null,
-                            v.color ? `Color ${v.color}` : null,
-                            v.material ? `Material ${v.material}` : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" • ")}
-                        </td>
-                        <td className="p-3 text-right font-extrabold text-red-600">{v.stockQty}</td>
-                        <td className="p-3 text-right font-bold text-gray-700">{v.lowStockThreshold}</td>
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-100 uppercase text-gray-600 text-xs font-semibold">
+                      <tr>
+                        <th className="p-2 sm:p-3 border-b whitespace-nowrap">Product</th>
+                        <th className="p-2 sm:p-3 border-b whitespace-nowrap">Variant</th>
+                        <th className="p-2 sm:p-3 border-b text-right whitespace-nowrap">Stock</th>
+                        <th className="p-2 sm:p-3 border-b text-right whitespace-nowrap">Threshold</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {data.lowStockAlerts.map((v, idx) => (
+                        <tr key={`${v.productId}-${v.sku || idx}`} className="hover:bg-gray-50 transition">
+                          <td className="p-2 sm:p-3 font-bold text-gray-900 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{v.productName}</td>
+                          <td className="p-2 sm:p-3 text-xs sm:text-sm text-gray-700 truncate max-w-[150px] sm:max-w-none">
+                            {[
+                              v.sku ? `SKU ${v.sku}` : null,
+                              v.size ? `Size ${v.size}` : null,
+                              v.color ? `Color ${v.color}` : null,
+                              v.material ? `Material ${v.material}` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(" • ")}
+                          </td>
+                          <td className="p-2 sm:p-3 text-right font-extrabold text-red-600 text-xs sm:text-sm">{v.stockQty}</td>
+                          <td className="p-2 sm:p-3 text-right font-bold text-gray-700 text-xs sm:text-sm">{v.lowStockThreshold}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

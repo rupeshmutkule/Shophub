@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import API_BASE_URL from "../config/api";
 
-const API_URL = "https://fakestoreapi.com/products?limit=50";
+const FAKESTORE_URL = "https://fakestoreapi.com/products?limit=50";
 
 const mapApiCategoryToStore = (apiCategory) => {
   if (apiCategory === "men's clothing" || apiCategory === "women's clothing") return "t-shirts";
@@ -20,6 +21,10 @@ const storeCategoryLabel = (name) => {
       return "Glassware";
     case "crockery":
       return "Crockery";
+    case "cups":
+      return "Cups";
+    case "others":
+      return "Others";
     default:
       return name;
   }
@@ -42,13 +47,44 @@ function CategoryPage() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(API_URL);
-        const data = await res.json();
-        if (!cancelled) {
-          const mapped = (data || []).filter(
-            (p) => mapApiCategoryToStore(p.category) === (name || "").toLowerCase()
+        // Fetch from FakeStore API
+        const fakeRes = await fetch(FAKESTORE_URL);
+        const fakeData = await fakeRes.json();
+        const fakeFiltered = (fakeData || []).filter(
+          (p) => mapApiCategoryToStore(p.category) === (name || "").toLowerCase()
+        );
+
+        // Fetch from MongoDB
+        let mongoFiltered = [];
+        try {
+          const mongoRes = await fetch(`${API_BASE_URL}/api/products`);
+          const mongoData = await mongoRes.json();
+          const filtered = (mongoData || []).filter(
+            (p) => (p.category || "").toLowerCase() === (name || "").toLowerCase()
           );
-          setItems(mapped);
+          
+          // Transform MongoDB products to ensure images are accessible
+          mongoFiltered = filtered.map(p => {
+            // Get image from multiple possible sources
+            const imageUrl = p.photo || 
+                           (p.images && p.images.length > 0 ? p.images[0].url : null) ||
+                           'https://via.placeholder.com/300?text=No+Image';
+            
+            return {
+              ...p,
+              id: p._id,
+              title: p.name,
+              image: imageUrl,
+              photo: imageUrl,
+              rating: { rate: p.rating || 0, count: 0 }
+            };
+          });
+        } catch (e) {
+          // MongoDB fetch failed, continue with FakeStore only
+        }
+
+        if (!cancelled) {
+          setItems([...fakeFiltered, ...mongoFiltered]);
         }
       } catch (e) {
         if (!cancelled) setError("Failed to load products");
@@ -95,8 +131,9 @@ function CategoryPage() {
     setPage(1);
   }, [filteredSorted.length]);
 
-  const handleProductClick = (id) => {
-    navigate(`/product/${id}`);
+  const handleProductClick = (product) => {
+    const productId = product._id || product.id;
+    navigate(`/product/${productId}`);
   };
 
   if (loading) {
@@ -228,9 +265,9 @@ function CategoryPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
               {paged.map((p) => (
                 <div
-                  key={p.id}
+                  key={p.id || p._id}
                   className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer transform hover:-translate-y-2"
-                  onClick={() => handleProductClick(p.id)}
+                  onClick={() => handleProductClick(p)}
                 >
                   {/* Gradient Overlay on Hover */}
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500 z-10 pointer-events-none"></div>

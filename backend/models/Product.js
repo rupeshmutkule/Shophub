@@ -52,6 +52,7 @@ const productSchema = new mongoose.Schema(
 
     // --- Categorization ---
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', index: true },
+    category: { type: String, lowercase: true, trim: true, index: true }, // Simple string category for filtering
 
     // --- Media ---
     images: [{ url: String, alt: String }],

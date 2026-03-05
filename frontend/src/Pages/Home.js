@@ -80,12 +80,9 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
   };
 
   const handleCardClick = (product) => {
-    if (product && product.id && !product._id) {
-      navigate(`/product/${product.id}`);
-      return;
-    }
-    setSelectedProduct(product);
-    setShowDetailsModal(true);
+    // Navigate to product details page for all products (both FakeStore and MongoDB)
+    const productId = product._id || product.id;
+    navigate(`/product/${productId}`);
   };
 
   const handleEditClick = (product, e) => {
@@ -228,19 +225,28 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
         const data = await res.json();
         if (!cancelled && Array.isArray(data)) {
           // Transform MongoDB products to match FakeStore format
-          const transformed = data.map(p => ({
-            id: p._id,
-            _id: p._id,
-            title: p.name,
-            name: p.name,
-            price: p.price,
-            description: p.description,
-            image: p.photo,
-            photo: p.photo,
-            rating: { rate: p.rating, count: 0 },
-            category: 'custom', // Mark as custom product
-            isMongoProduct: true
-          }));
+          const transformed = data.map(p => {
+            // Get image from multiple possible sources
+            const imageUrl = p.photo || 
+                           (p.images && p.images.length > 0 ? p.images[0].url : null) ||
+                           'https://via.placeholder.com/300?text=No+Image';
+            
+            return {
+              id: p._id,
+              _id: p._id,
+              title: p.name,
+              name: p.name,
+              price: p.price,
+              description: p.description,
+              image: imageUrl,
+              photo: imageUrl,
+              images: p.images || [],
+              rating: { rate: p.rating, count: 0 },
+              category: p.category || 'others', // Use actual product category
+              isCustomizable: p.isCustomizable !== false, // Default to true if not specified
+              isMongoProduct: true
+            };
+          });
           setMongoProducts(transformed);
         }
       } catch (err) {
@@ -268,14 +274,19 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
       glassware: [],
       crockery: [],
       cups: [],
+      others: [],
     };
     allProducts.forEach((p) => {
-      // MongoDB products go to all categories
+      // MongoDB products use their category field
       if (p.isMongoProduct) {
-        Object.keys(grouped).forEach(key => {
-          grouped[key].push(p);
-        });
+        const category = p.category || 'others';
+        if (grouped[category]) {
+          grouped[category].push(p);
+        } else {
+          grouped.others.push(p);
+        }
       } else {
+        // FakeStore API products use mapped categories
         const key = mapApiCategoryToStore(p.category);
         if (grouped[key]) grouped[key].push(p);
       }
@@ -298,6 +309,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
     { id: 'glassware', name: 'Glassware', icon: '🍷' },
     { id: 'crockery', name: 'Crockery', icon: '🍽️' },
     { id: 'cups', name: 'Cups', icon: '☕' },
+    { id: 'others', name: 'Others', icon: '📦' },
   ];
 
   return (

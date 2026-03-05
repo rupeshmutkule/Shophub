@@ -38,6 +38,8 @@ function AdminOrders() {
   const [imageModal, setImageModal] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
+  const [designModal, setDesignModal] = useState(null);
+  const [designIndex, setDesignIndex] = useState(0);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -254,57 +256,59 @@ function AdminOrders() {
         </div>
 
         {/* Filter Tabs */}
-        <div className="bg-white rounded-2xl shadow-lg p-2 mb-8 inline-flex gap-2 flex-wrap">
-          <button
-            onClick={() => setFilterStatus('all')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              filterStatus === 'all'
-                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            All Orders ({orders.length})
-          </button>
-          <button
-            onClick={() => setFilterStatus('order_received')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              filterStatus === 'order_received'
-                ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-md'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Order Received ({stats.order_received})
-          </button>
-          <button
-            onClick={() => setFilterStatus('in_production')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              filterStatus === 'in_production'
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            In Production ({stats.in_production})
-          </button>
-          <button
-            onClick={() => setFilterStatus('shipped')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              filterStatus === 'shipped'
-                ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-md'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Shipped ({stats.shipped})
-          </button>
-          <button
-            onClick={() => setFilterStatus('cancelled')}
-            className={`px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 ${
-              filterStatus === 'cancelled'
-                ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Cancelled ({orders.filter(o => normalizeStatus(o.status) === 'cancelled').length})
-          </button>
+        <div className="bg-white rounded-2xl shadow-lg p-2 mb-8 w-full overflow-x-auto">
+          <div className="flex gap-2 min-w-max">
+            <button
+              onClick={() => setFilterStatus('all')}
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap ${
+                filterStatus === 'all'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              All ({orders.length})
+            </button>
+            <button
+              onClick={() => setFilterStatus('order_received')}
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap ${
+                filterStatus === 'order_received'
+                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Received ({stats.order_received})
+            </button>
+            <button
+              onClick={() => setFilterStatus('in_production')}
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap ${
+                filterStatus === 'in_production'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Production ({stats.in_production})
+            </button>
+            <button
+              onClick={() => setFilterStatus('shipped')}
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap ${
+                filterStatus === 'shipped'
+                  ? 'bg-gradient-to-r from-violet-600 to-purple-700 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Shipped ({stats.shipped})
+            </button>
+            <button
+              onClick={() => setFilterStatus('cancelled')}
+              className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap ${
+                filterStatus === 'cancelled'
+                  ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Cancelled ({orders.filter(o => normalizeStatus(o.status) === 'cancelled').length})
+            </button>
+          </div>
         </div>
 
         {/* Orders List */}
@@ -375,24 +379,24 @@ function AdminOrders() {
                   {/* Customer Details */}
                   <div className="mb-8">
                     <div className="flex items-center gap-2 mb-4">
-                      <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
-                      <h4 className="text-xl font-bold text-gray-900">Customer Information</h4>
+                      <h4 className="text-lg sm:text-xl font-bold text-gray-900">Customer Information</h4>
                     </div>
-                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-2xl border-2 border-indigo-100">
-                      <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 sm:p-6 rounded-2xl border-2 border-indigo-100">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                          <p className="text-sm font-semibold text-gray-600 mb-1">Name</p>
-                          <p className="text-lg font-bold text-gray-900">{order.customerName}</p>
+                          <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Name</p>
+                          <p className="text-base sm:text-lg font-bold text-gray-900 break-words">{order.customerName}</p>
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-600 mb-1">Email</p>
-                          <p className="text-lg font-bold text-gray-900">{order.email}</p>
+                          <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Email</p>
+                          <p className="text-base sm:text-lg font-bold text-gray-900 break-all">{order.email}</p>
                         </div>
-                        <div className="md:col-span-2">
-                          <p className="text-sm font-semibold text-gray-600 mb-1">Shipping Address</p>
-                          <p className="text-lg font-bold text-gray-900">
+                        <div className="sm:col-span-2">
+                          <p className="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Shipping Address</p>
+                          <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
                             {order.address}, {order.city}, {order.zip}
                           </p>
                         </div>
@@ -449,15 +453,14 @@ function AdminOrders() {
                                 height="96"
                                 className="w-24 h-24 object-contain rounded-xl shadow-md bg-white cursor-pointer hover:scale-105 transition-transform"
                                 onClick={() => {
-                                  const imageUrl = item.customizationPreview || item.customDesignUrl || item.photo || item.image;
-                                  console.log('🖼️ Image clicked:', {
-                                    isCustomized: item.isCustomized,
-                                    hasCustomizationPreview: !!item.customizationPreview,
-                                    hasCustomDesignUrl: !!item.customDesignUrl,
-                                    imageUrl: imageUrl
-                                  });
-                                  if (imageUrl) {
-                                    setImageModal(imageUrl);
+                                  if (item.isCustomized && (item.frontDesignUrl || item.backDesignUrl)) {
+                                    setDesignModal(item);
+                                    setDesignIndex(0);
+                                  } else {
+                                    const imageUrl = item.customizationPreview || item.customDesignUrl || item.photo || item.image;
+                                    if (imageUrl) {
+                                      setImageModal(imageUrl);
+                                    }
                                   }
                                 }}
                                 onError={(e) => { e.target.src = 'https://via.placeholder.com/100?text=?'; }}
@@ -468,6 +471,11 @@ function AdminOrders() {
                               {item.isCustomized && (
                                 <div className="absolute -bottom-2 -left-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
                                   CUSTOM
+                                </div>
+                              )}
+                              {item.isCustomized && (item.frontDesignUrl || item.backDesignUrl) && (
+                                <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg cursor-pointer hover:bg-indigo-700">
+                                  👀
                                 </div>
                               )}
                             </div>
@@ -483,15 +491,27 @@ function AdminOrders() {
                               <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                                 {item.description || 'No description available'}
                               </p>
-                              {item.isCustomized && (item.customizationPreview || item.customDesignUrl) && (
+                              {item.isCustomized && (item.customizationPreview || item.customDesignUrl || item.frontDesignUrl || item.backDesignUrl) && (
                                 <div className="mb-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                                  <p className="text-xs font-bold text-purple-700 mb-1">🎨 Customer Design Preview:</p>
-                                  <button
-                                    onClick={() => setImageModal(item.customizationPreview || item.customDesignUrl)}
-                                    className="text-xs text-indigo-600 hover:text-indigo-800 underline font-semibold"
-                                  >
-                                    Click to View Full Design →
-                                  </button>
+                                  <p className="text-xs font-bold text-purple-700 mb-1">🎨 Customer Design:</p>
+                                  {item.frontDesignUrl || item.backDesignUrl ? (
+                                    <button
+                                      onClick={() => {
+                                        setDesignModal(item);
+                                        setDesignIndex(0);
+                                      }}
+                                      className="text-xs text-indigo-600 hover:text-indigo-800 underline font-semibold"
+                                    >
+                                      View Front & Back Designs →
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => setImageModal(item.customizationPreview || item.customDesignUrl)}
+                                      className="text-xs text-indigo-600 hover:text-indigo-800 underline font-semibold"
+                                    >
+                                      Click to View Full Design →
+                                    </button>
+                                  )}
                                 </div>
                               )}
                               <div className="flex items-center gap-2">
@@ -507,13 +527,13 @@ function AdminOrders() {
                   )}
 
                   {/* Status update */}
-                  <div className="pt-6 border-t-2 border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="w-full sm:w-auto">
+                  <div className="pt-6 border-t-2 border-gray-200 space-y-4">
+                    <div className="w-full">
                       <p className="text-sm font-bold text-gray-700 mb-2">Update workflow status</p>
                       <select
                         value={normalizeStatus(order.status)}
                         onChange={(e) => handleUpdateStatus(order._id, e.target.value)}
-                        className="w-full sm:w-[320px] px-4 py-3 rounded-xl border-2 border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-sm"
                       >
                         {STATUS_OPTIONS.map((s) => (
                           <option key={s} value={s}>
@@ -523,7 +543,7 @@ function AdminOrders() {
                       </select>
                     </div>
 
-                    <div className="w-full sm:w-auto text-sm font-bold text-gray-600">
+                    <div className="w-full text-sm font-bold text-gray-600">
                       Payment:{" "}
                       <span className="text-indigo-700">
                         {(order.payment?.status || "n/a").toUpperCase()}
@@ -531,28 +551,30 @@ function AdminOrders() {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                    <div className="flex gap-3">
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3 flex-1">
                       {order.status !== 'cancelled' && (
                         <button 
                           onClick={() => handleCancelOrder(order._id)}
-                          className="text-orange-600 hover:text-orange-800 font-bold text-sm flex items-center gap-1 transition-colors px-4 py-2 bg-orange-50 rounded-lg hover:bg-orange-100"
+                          className="text-orange-600 hover:text-orange-800 font-bold text-sm flex items-center justify-center gap-1 transition-colors px-4 py-2 bg-orange-50 rounded-lg hover:bg-orange-100"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
-                          Cancel Order
+                          <span className="hidden sm:inline">Cancel Order</span>
+                          <span className="sm:hidden">Cancel</span>
                         </button>
                       )}
                     </div>
                     <button 
                       onClick={() => handlePermanentDelete(order._id)}
-                      className="text-red-500 hover:text-red-700 font-bold text-sm flex items-center gap-1 transition-colors"
+                      className="text-red-500 hover:text-red-700 font-bold text-sm flex items-center justify-center gap-1 transition-colors px-4 py-2 bg-red-50 rounded-lg hover:bg-red-100"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
-                      Delete Permanently
+                      <span className="hidden sm:inline">Delete Permanently</span>
+                      <span className="sm:hidden">Delete</span>
                     </button>
                   </div>
 
@@ -651,6 +673,99 @@ function AdminOrders() {
         cancelText="Cancel"
         type="danger"
       />
+
+      {/* Design Modal */}
+      {designModal && (designModal.frontDesignUrl || designModal.backDesignUrl) && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4" onClick={() => setDesignModal(null)}>
+          <div className="relative max-w-4xl max-h-[90vh] bg-white rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setDesignModal(null)}
+              className="absolute -top-4 -right-4 bg-red-600 text-white rounded-full p-3 shadow-lg hover:bg-red-700 transition z-10"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{designModal.name} - Customer Designs</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {designIndex === 0 && designModal.frontDesignUrl ? '👕 FRONT DESIGN' : 
+               designIndex === 1 && designModal.backDesignUrl ? '🔄 BACK DESIGN' : 
+               designModal.frontDesignUrl ? '👕 FRONT DESIGN' : '🔄 BACK DESIGN'}
+            </p>
+            
+            <div className="bg-gray-100 p-4 rounded-xl mb-4 flex items-center justify-center" style={{ minHeight: '500px' }}>
+              <div className="relative" style={{ width: '400px', aspectRatio: '520/620' }}>
+                {/* Design composite (already includes product image) */}
+                <img 
+                  src={(designIndex === 0 ? designModal.frontDesignUrl : designModal.backDesignUrl) || designModal.frontDesignUrl || designModal.backDesignUrl} 
+                  alt={designIndex === 0 ? 'Front Design' : 'Back Design'} 
+                  className="w-full h-full object-contain rounded-lg shadow-xl"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 justify-center mb-4">
+              {/* Left Arrow */}
+              <button
+                onClick={() => {
+                  if (designIndex === 0 && designModal.backDesignUrl) {
+                    setDesignIndex(1);
+                  } else if (designIndex === 1) {
+                    setDesignIndex(0);
+                  }
+                }}
+                disabled={designIndex === 0 && !designModal.backDesignUrl}
+                className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </button>
+
+              {/* Download Button */}
+              <a 
+                href={(designIndex === 0 ? designModal.frontDesignUrl : designModal.backDesignUrl) || designModal.frontDesignUrl || designModal.backDesignUrl} 
+                download={designIndex === 0 && designModal.frontDesignUrl ? `${designModal.name}-front-design.png` : `${designModal.name}-back-design.png`}
+                className="px-6 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 transition flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download {designIndex === 0 ? 'Front' : 'Back'}
+              </a>
+
+              {/* Right Arrow */}
+              <button
+                onClick={() => {
+                  if (designIndex === 0 && designModal.backDesignUrl) {
+                    setDesignIndex(1);
+                  } else if (designIndex === 1 && designModal.frontDesignUrl) {
+                    setDesignIndex(0);
+                  }
+                }}
+                disabled={designIndex === 1 && !designModal.frontDesignUrl}
+                className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                Next
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setDesignModal(null)}
+                className="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-bold hover:bg-gray-300 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

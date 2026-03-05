@@ -10,6 +10,26 @@ export const getAllProducts = async (req, res) => {
   }
 };
 
+export const getProductsByCategory = async (req, res) => {
+  try {
+    const { category } = req.params;
+    console.log('\n=== GET PRODUCTS BY CATEGORY ===');
+    console.log('📂 Category requested:', category);
+    
+    const products = await Product.find({ 
+      category: category.toLowerCase() 
+    });
+    
+    console.log(`✅ Found ${products.length} products in category "${category}"`);
+    console.log('==========================\n');
+    
+    res.json(products);
+  } catch (err) {
+    console.error('❌ Category filter error:', err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 export const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -24,10 +44,23 @@ export const getProductById = async (req, res) => {
 
 export const createProduct = async (req, res) => {
   try {
+    console.log('\n=== CREATE PRODUCT DEBUG ===');
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('📂 Category received:', req.body.category);
+    
     const newProduct = new Product(req.body);
     await newProduct.save();
+    
+    console.log('✅ Product saved successfully!');
+    console.log('   - Product ID:', newProduct._id);
+    console.log('   - Name:', newProduct.name);
+    console.log('   - Category:', newProduct.category);
+    console.log('   - Price:', newProduct.price);
+    console.log('==========================\n');
+    
     res.json(newProduct);
   } catch (err) {
+    console.error('❌ Product creation error:', err);
     res.status(500).json({ error: err.message });
   }
 };

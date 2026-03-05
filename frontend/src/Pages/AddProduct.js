@@ -7,36 +7,56 @@ function AddProduct({ onAddProduct }) {
     price: '',
     rating: '',
     photo: '',
-    description: ''
+    description: '',
+    category: '',
+    isCustomizable: true
   });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [frontImageFile, setFrontImageFile] = useState(null);
+  const [backImageFile, setBackImageFile] = useState(null);
+  const [frontImagePreview, setFrontImagePreview] = useState('');
+  const [backImagePreview, setBackImagePreview] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  const handleImageChange = (e) => {
+  const categories = [
+    { value: 't-shirts', label: 'T-Shirts' },
+    { value: 'tumblers', label: 'Tumblers' },
+    { value: 'glassware', label: 'Glassware' },
+    { value: 'crockery', label: 'Crockery' },
+    { value: 'cups', label: 'Cups' },
+    { value: 'others', label: 'Others' }
+  ];
+
+  const handleImageChange = (e, side) => {
     const file = e.target.files[0];
     if (file) {
-      setImageFile(file);
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+      if (side === 'front') {
+        setFrontImageFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFrontImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setBackImageFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setBackImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
-  const uploadImageToCloudinary = async () => {
-    if (!imageFile) return null;
+  const uploadImageToCloudinary = async (file) => {
+    if (!file) return null;
 
-    setUploading(true);
     try {
       // Convert file to base64
       const reader = new FileReader();
       const base64Promise = new Promise((resolve, reject) => {
         reader.onloadend = () => resolve(reader.result);
         reader.onerror = reject;
-        reader.readAsDataURL(imageFile);
+        reader.readAsDataURL(file);
       });
 
       const base64Image = await base64Promise;
@@ -57,40 +77,50 @@ function AddProduct({ onAddProduct }) {
       }
     } catch (error) {
       console.error('Image upload error:', error);
-      alert('Failed to upload image. Please try again.');
       return null;
-    } finally {
-      setUploading(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Upload image first if file is selected
-    let photoUrl = formData.photo;
-    if (imageFile) {
-      photoUrl = await uploadImageToCloudinary();
-      if (!photoUrl) {
-        alert('Image upload failed. Please try again.');
-        return;
-      }
-    }
-
-    if (!photoUrl) {
-      alert('Please provide a product image');
+    if (!frontImageFile) {
+      alert('Please upload at least a front image');
       return;
     }
 
-    console.log('Product to add:', formData);
-    
+    setUploading(true);
+
     try {
+      // Upload front image
+      const frontImageUrl = await uploadImageToCloudinary(frontImageFile);
+      if (!frontImageUrl) {
+        alert('Front image upload failed. Please try again.');
+        setUploading(false);
+        return;
+      }
+
+      // Upload back image if provided
+      let backImageUrl = null;
+      if (backImageFile) {
+        backImageUrl = await uploadImageToCloudinary(backImageFile);
+      }
+
       const payload = {
         ...formData,
-        photo: photoUrl,
+        photo: frontImageUrl, // Legacy field for backward compatibility
+        images: [
+          { url: frontImageUrl, alt: 'Front view' },
+          ...(backImageUrl ? [{ url: backImageUrl, alt: 'Back view' }] : [])
+        ],
         price: Number(formData.price),
         rating: Number(formData.rating)
       };
+
+      console.log('\n=== FRONTEND: CREATING PRODUCT ===');
+      console.log('📦 Payload being sent:', JSON.stringify(payload, null, 2));
+      console.log('📂 Category:', payload.category);
+      console.log('==========================\n');
 
       const response = await fetch(`${API_BASE_URL}/api/products`, {
         method: 'POST',
@@ -111,10 +141,14 @@ function AddProduct({ onAddProduct }) {
           price: '',
           rating: '',
           photo: '',
-          description: ''
+          description: '',
+          category: '',
+          isCustomizable: true
         });
-        setImageFile(null);
-        setImagePreview('');
+        setFrontImageFile(null);
+        setBackImageFile(null);
+        setFrontImagePreview('');
+        setBackImagePreview('');
       } else {
         console.error('Server Error:', data);
         alert(`Failed to save product: ${data.error || 'Unknown error'}`);
@@ -122,6 +156,8 @@ function AddProduct({ onAddProduct }) {
     } catch (error) {
       console.error('Fetch Error:', error);
       alert('Error connecting to backend server. Make sure the backend is running.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -164,6 +200,28 @@ function AddProduct({ onAddProduct }) {
               />
             </div>
 
+            {/* Category Dropdown */}
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                Category <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition outline-none bg-white"
+              >
+                <option value="">Select product category</option>
+                {categories.map(cat => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Price and Rating Row */}
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -203,59 +261,143 @@ function AddProduct({ onAddProduct }) {
               </div>
             </div>
 
-            {/* Product Image Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Product Image <span className="text-red-500">*</span>
-              </label>
-              
-              {/* Image Preview */}
-              {imagePreview && (
-                <div className="mb-3 relative">
-                  <img 
-                    src={imagePreview} 
-                    alt="Preview" 
-                    className="w-full h-48 object-contain bg-gray-50 rounded-lg border-2 border-gray-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImageFile(null);
-                      setImagePreview('');
-                    }}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-
-              {/* File Input */}
-              <div className="relative">
-                <input
-                  type="file"
-                  id="imageFile"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-                <label
-                  htmlFor="imageFile"
-                  className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
-                >
-                  <div className="text-center">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <p className="mt-1 text-sm text-gray-600">
-                      {imageFile ? imageFile.name : 'Click to upload product image'}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</p>
-                  </div>
+            {/* Product Images Upload - Front and Back */}
+            <div className="space-y-4">
+              {/* Front Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Front Image <span className="text-red-500">*</span>
                 </label>
+                
+                {frontImagePreview && (
+                  <div className="mb-3 relative">
+                    <img 
+                      src={frontImagePreview} 
+                      alt="Front Preview" 
+                      className="w-full h-48 object-contain bg-gray-50 rounded-lg border-2 border-blue-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFrontImageFile(null);
+                        setFrontImagePreview('');
+                      }}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      FRONT
+                    </div>
+                  </div>
+                )}
+
+                {!frontImagePreview && (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id="frontImageFile"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, 'front')}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="frontImageFile"
+                      className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
+                    >
+                      <div className="text-center">
+                        <svg className="mx-auto h-12 w-12 text-blue-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <p className="mt-1 text-sm text-gray-600 font-medium">
+                          Click to upload front image
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</p>
+                      </div>
+                    </label>
+                  </div>
+                )}
               </div>
+
+              {/* Back Image */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Back Image <span className="text-gray-400">(Optional)</span>
+                </label>
+                
+                {backImagePreview && (
+                  <div className="mb-3 relative">
+                    <img 
+                      src={backImagePreview} 
+                      alt="Back Preview" 
+                      className="w-full h-48 object-contain bg-gray-50 rounded-lg border-2 border-purple-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBackImageFile(null);
+                        setBackImagePreview('');
+                      }}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="absolute bottom-2 left-2 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      BACK
+                    </div>
+                  </div>
+                )}
+
+                {!backImagePreview && (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id="backImageFile"
+                      accept="image/*"
+                      onChange={(e) => handleImageChange(e, 'back')}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="backImageFile"
+                      className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-purple-300 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all duration-200"
+                    >
+                      <div className="text-center">
+                        <svg className="mx-auto h-12 w-12 text-purple-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <p className="mt-1 text-sm text-gray-600 font-medium">
+                          Click to upload back image
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</p>
+                      </div>
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Customizable Toggle */}
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+              <input
+                type="checkbox"
+                id="isCustomizable"
+                name="isCustomizable"
+                checked={formData.isCustomizable}
+                onChange={(e) => setFormData({ ...formData, isCustomizable: e.target.checked })}
+                className="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              />
+              <label htmlFor="isCustomizable" className="flex-1 cursor-pointer">
+                <p className="text-sm font-semibold text-gray-800">Is this item customizable?</p>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  {formData.isCustomizable 
+                    ? '✓ Users can customize this product with text, images, and designs' 
+                    : '✗ Users can only add to cart or buy directly'}
+                </p>
+              </label>
             </div>
 
             {/* Description */}

@@ -16,6 +16,10 @@ const orderItemSchema = new mongoose.Schema(
     isCustomized: { type: Boolean, default: false },
     customizationPreview: { type: String },
     customDesignUrl: { type: String },
+    
+    // Front and Back Design URLs (for customized products)
+    frontDesignUrl: { type: String },
+    backDesignUrl: { type: String },
 
     // Variant snapshot (size/color/material)
     variant: {

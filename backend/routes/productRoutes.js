@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   getAllProducts,
+  getProductsByCategory,
   getProductById,
   createProduct,
   updateProduct,
@@ -11,6 +12,7 @@ import {
 const router = express.Router();
 
 router.get('/', getAllProducts);
+router.get('/category/:category', getProductsByCategory); // Must be before /:id
 router.get('/:id', getProductById);
 router.post('/', createProduct);
 router.put('/:id', updateProduct);

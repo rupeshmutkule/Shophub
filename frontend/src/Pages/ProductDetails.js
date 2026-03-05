@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import authFetch from "../utils/authFetch";
+import API_BASE_URL from "../config/api";
 
 const FAKESTORE_URL = "https://fakestoreapi.com/products";
 
@@ -11,14 +12,48 @@ function ProductDetails({ onAddToCart, user }) {
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
   const [reviewMeta, setReviewMeta] = useState({ averageRating: 0, count: 0 });
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const isAdminOrHost = user && (user.userType === 'admin' || user.userType === 'host');
+
+  // Get all available images for the product
+  const getProductImages = () => {
+    if (!product) return [];
+    
+    // If product has images array (MongoDB products with front/back)
+    if (product.images && product.images.length > 0) {
+      // Handle both formats: array of strings or array of objects with url property
+      return product.images.map(img => typeof img === 'string' ? img : img.url);
+    }
+    
+    // Fallback to single photo field or image field
+    const singleImage = product.photo || product.image;
+    return singleImage ? [singleImage] : [];
+  };
+
+  const productImages = getProductImages();
+  const hasMultipleImages = productImages.length > 1;
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
       try {
+        // First try to fetch from MongoDB
+        try {
+          const mongoRes = await fetch(`${API_BASE_URL}/api/products/${id}`);
+          if (mongoRes.ok) {
+            const p = await mongoRes.json();
+            if (!cancelled) {
+              setProduct(p);
+              return;
+            }
+          }
+        } catch (e) {
+          // MongoDB fetch failed, try FakeStore
+        }
+
+        // Fallback to FakeStore API
         const res = await fetch(`${FAKESTORE_URL}/${id}`);
         const p = await res.json();
         if (!cancelled) setProduct(p);
@@ -106,13 +141,81 @@ function ProductDetails({ onAddToCart, user }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-        <div className="md:w-1/2 bg-gray-50 flex items-center justify-center p-10">
-          <img
-            src={product.image}
-            alt={product.title}
-            className="w-full max-w-md h-auto object-contain"
-            loading="lazy"
-          />
+        {/* Image Slider Section */}
+        <div className="md:w-1/2 bg-gray-50 flex flex-col items-center justify-center p-10 relative">
+          {/* Main Image */}
+          <div className="w-full max-w-md relative">
+            <img
+              src={productImages[currentImageIndex] || product.image}
+              alt={product.title}
+              className="w-full h-auto object-contain"
+              loading="lazy"
+            />
+            
+            {/* Image Counter Badge */}
+            {hasMultipleImages && (
+              <div className="absolute top-4 right-4 bg-black/70 text-white text-sm font-bold px-3 py-1 rounded-full">
+                {currentImageIndex + 1} / {productImages.length}
+              </div>
+            )}
+
+            {/* Navigation Arrows */}
+            {hasMultipleImages && (
+              <>
+                <button
+                  onClick={() => setCurrentImageIndex((prev) => (prev === 0 ? productImages.length - 1 : prev - 1))}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 rounded-full p-3 shadow-lg transition-all hover:scale-110"
+                  aria-label="Previous image"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setCurrentImageIndex((prev) => (prev === productImages.length - 1 ? 0 : prev + 1))}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 rounded-full p-3 shadow-lg transition-all hover:scale-110"
+                  aria-label="Next image"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </>
+            )}
+          </div>
+
+          {/* Thumbnail Navigation */}
+          {hasMultipleImages && (
+            <div className="flex gap-3 mt-6">
+              {productImages.map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentImageIndex(idx)}
+                  className={`relative w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                    currentImageIndex === idx
+                      ? 'border-indigo-600 ring-2 ring-indigo-300'
+                      : 'border-gray-300 hover:border-indigo-400'
+                  }`}
+                >
+                  <img
+                    src={img}
+                    alt={`View ${idx + 1}`}
+                    className="w-full h-full object-contain bg-white"
+                  />
+                  {idx === 0 && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-blue-600 text-white text-xs font-bold py-0.5 text-center">
+                      FRONT
+                    </div>
+                  )}
+                  {idx === 1 && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-purple-600 text-white text-xs font-bold py-0.5 text-center">
+                      BACK
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="md:w-1/2 p-8 flex flex-col">
           <h1 className="text-3xl font-extrabold text-gray-900 mb-3">{product.title}</h1>
@@ -155,13 +258,14 @@ function ProductDetails({ onAddToCart, user }) {
                 Edit Product
               </button>
             ) : (
-              // Regular users and agents see Customize and Add to Cart
+              // Regular users and agents
               <>
+                {/* Always show Customize button - user can choose to customize or not */}
                 <button
                   onClick={handleCustomize}
                   className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all"
                 >
-                  Customize
+                  {product.isCustomizable !== false ? '✨ Customize' : '🎨 Customize (Optional)'}
                 </button>
                 <button
                   onClick={handleAddToCartClick}

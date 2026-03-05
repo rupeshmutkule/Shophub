@@ -62,19 +62,28 @@ const Products = () => {
         const data = await res.json();
         if (!cancelled && Array.isArray(data)) {
           // Transform MongoDB products to match FakeStore format
-          const transformed = data.map(p => ({
-            id: p._id,
-            _id: p._id,
-            title: p.name,
-            name: p.name,
-            price: p.price,
-            description: p.description,
-            image: p.photo,
-            photo: p.photo,
-            rating: { rate: p.rating, count: 0 },
-            category: 'custom',
-            isMongoProduct: true
-          }));
+          const transformed = data.map(p => {
+            // Get image from multiple possible sources
+            const imageUrl = p.photo || 
+                           (p.images && p.images.length > 0 ? p.images[0].url : null) ||
+                           'https://via.placeholder.com/300?text=No+Image';
+            
+            return {
+              id: p._id,
+              _id: p._id,
+              title: p.name,
+              name: p.name,
+              price: p.price,
+              description: p.description,
+              image: imageUrl,
+              photo: imageUrl,
+              images: p.images || [],
+              rating: { rate: p.rating, count: 0 },
+              category: p.category || 'others', // Use actual product category
+              isCustomizable: p.isCustomizable !== false, // Default to true if not specified
+              isMongoProduct: true
+            };
+          });
           setMongoProducts(transformed);
         }
       } catch (err) {
@@ -102,14 +111,19 @@ const Products = () => {
       glassware: [],
       crockery: [],
       cups: [],
+      others: [],
     };
     allProducts.forEach((p) => {
-      // MongoDB products go to all categories
+      // MongoDB products use their actual category
       if (p.isMongoProduct) {
-        Object.keys(grouped).forEach(key => {
-          grouped[key].push(p);
-        });
+        const category = (p.category || 'others').toLowerCase();
+        if (grouped[category]) {
+          grouped[category].push(p);
+        } else {
+          grouped.others.push(p);
+        }
       } else {
+        // FakeStore products use mapped categories
         const key = mapApiCategoryToStore(p.category);
         if (grouped[key]) grouped[key].push(p);
       }
@@ -219,8 +233,8 @@ const Products = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
               {filteredProducts.map((product) => (
                 <div 
-                  key={product.id} 
-                  onClick={() => navigate(`/product/${product.id}`)}
+                  key={product.id || product._id} 
+                  onClick={() => navigate(`/product/${product._id || product.id}`)}
                   className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer transform hover:-translate-y-2"
                 >
                   {/* Gradient Overlay on Hover */}
@@ -279,7 +293,7 @@ const Products = () => {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/product/${product.id}`);
+                          navigate(`/product/${product._id || product.id}`);
                         }}
                         className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 text-sm font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                       >
