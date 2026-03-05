@@ -48,7 +48,7 @@ function PlaceOrder() {
                         <h4 className="font-bold text-gray-900">{item.name}</h4>
                         <p className="text-sm text-gray-500 line-clamp-1">{item.description}</p>
                       </div>
-                      <span className="font-bold text-gray-900">${Number(item.price).toFixed(2)}</span>
+                      <span className="font-bold text-gray-900">₹{Number(item.price).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -56,7 +56,7 @@ function PlaceOrder() {
                 <div className="border-t border-gray-100 pt-4 space-y-2">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal</span>
-                    <span>${orderTotal.toFixed(2)}</span>
+                    <span>₹{orderTotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Shipping</span>
@@ -64,7 +64,7 @@ function PlaceOrder() {
                   </div>
                   <div className="flex justify-between text-2xl font-bold text-gray-900 pt-4 border-t border-gray-100 mt-2">
                     <span>Total Paid</span>
-                    <span>${orderTotal.toFixed(2)}</span>
+                    <span>₹{orderTotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

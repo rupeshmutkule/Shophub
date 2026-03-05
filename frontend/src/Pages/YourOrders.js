@@ -177,7 +177,7 @@ function YourOrders({ user }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <p className="text-lg font-bold text-green-600">${Number(order.total || 0).toFixed(2)}</p>
+                    <p className="text-lg font-bold text-green-600">₹{Number(order.total || 0).toFixed(2)}</p>
                     {(order.status === 'pending' || order.status === 'order_received' || order.status === 'payment_verified') && (
                       <button 
                         onClick={() => handleCancel(order._id)}
@@ -270,7 +270,7 @@ function YourOrders({ user }) {
                                    )}
                                  </div>
                                )}
-                               <p className="text-sm text-gray-500">${Number(item.price || 0).toFixed(2)}</p>
+                               <p className="text-sm text-gray-500">₹{Number(item.price || 0).toFixed(2)}</p>
                                {canReviewOrder(order) && (
                                  <button
                                    onClick={() => openReviewModal(order._id, item)}

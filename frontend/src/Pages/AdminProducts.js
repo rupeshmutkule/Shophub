@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
+import ConfirmModal from '../components/ConfirmModal';
+import SuccessToast from '../components/SuccessToast';
 import API_BASE_URL from "../config/api";
 function AdminProducts() {
   const [products, setProducts] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const fetchProducts = () => {
     fetch(`${API_BASE_URL}/api/products`)
@@ -26,13 +31,18 @@ function AdminProducts() {
   };
 
   const handleDelete = (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    setProductToDelete(id);
+    setShowDeleteModal(true);
+  };
 
-    fetch(`${API_BASE_URL}/api/products/${id}`, { method: 'DELETE' })
+  const confirmDelete = () => {
+    if (!productToDelete) return;
+
+    fetch(`${API_BASE_URL}/api/products/${productToDelete}`, { method: 'DELETE' })
       .then(res => {
         if (res.ok) {
-            setProducts(products.filter(p => p._id !== id));
-            // Ideally notify Home to refetch, but if Home refetches on mount it's fine.
+            setProducts(products.filter(p => p._id !== productToDelete));
+            setShowSuccessToast(true);
         } else {
             alert("Delete failed");
         }
@@ -78,7 +88,7 @@ function AdminProducts() {
                                     />
                                 </td>
                                 <td className="p-4 font-medium text-gray-900 line-clamp-2 max-w-xs" title={product.name}>{product.name}</td>
-                                <td className="p-4 text-green-600 font-bold">${Number(product.price).toFixed(2)}</td>
+                                <td className="p-4 text-green-600 font-bold">₹{Number(product.price).toFixed(2)}</td>
                                 <td className="p-4 text-yellow-500 font-bold">{product.rating} ★</td>
                                 <td className="p-4 text-center space-x-2 flex justify-center">
                                     <NavLink 
@@ -108,6 +118,26 @@ function AdminProducts() {
             </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title="Delete Product?"
+        message="Are you sure you want to delete this product? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
+
+      {/* Success Toast */}
+      <SuccessToast
+        message="Product deleted successfully!"
+        isOpen={showSuccessToast}
+        onClose={() => setShowSuccessToast(false)}
+        duration={2000}
+      />
     </div>
   );
 }

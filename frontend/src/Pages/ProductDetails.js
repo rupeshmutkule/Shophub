@@ -4,13 +4,15 @@ import authFetch from "../utils/authFetch";
 
 const FAKESTORE_URL = "https://fakestoreapi.com/products";
 
-function ProductDetails({ onAddToCart }) {
+function ProductDetails({ onAddToCart, user }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
   const [reviewMeta, setReviewMeta] = useState({ averageRating: 0, count: 0 });
+
+  const isAdminOrHost = user && (user.userType === 'admin' || user.userType === 'host');
 
   useEffect(() => {
     let cancelled = false;
@@ -58,6 +60,15 @@ function ProductDetails({ onAddToCart }) {
 
   const handleCustomize = () => {
     navigate(`/customize/${id}`, { state: { product } });
+  };
+
+  const handleEdit = () => {
+    // For MongoDB products, navigate to edit page
+    if (product._id) {
+      navigate(`/editproduct/${product._id}`);
+    } else {
+      alert('This product cannot be edited as it is from an external source.');
+    }
   };
 
   const handleAddToCartClick = () => {
@@ -132,18 +143,34 @@ function ProductDetails({ onAddToCart }) {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-8">
-            <button
-              onClick={handleCustomize}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all"
-            >
-              Customize
-            </button>
-            <button
-              onClick={handleAddToCartClick}
-              className="flex-1 bg-white border-2 border-gray-200 text-gray-900 py-3 px-4 rounded-xl font-bold shadow-sm hover:shadow-md hover:border-indigo-500 hover:text-indigo-600 transition-all"
-            >
-              Add to Cart
-            </button>
+            {isAdminOrHost ? (
+              // Admin/Host sees Edit button only
+              <button
+                onClick={handleEdit}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:shadow-lg hover:from-amber-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Product
+              </button>
+            ) : (
+              // Regular users and agents see Customize and Add to Cart
+              <>
+                <button
+                  onClick={handleCustomize}
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all"
+                >
+                  Customize
+                </button>
+                <button
+                  onClick={handleAddToCartClick}
+                  className="flex-1 bg-white border-2 border-gray-200 text-gray-900 py-3 px-4 rounded-xl font-bold shadow-sm hover:shadow-md hover:border-indigo-500 hover:text-indigo-600 transition-all"
+                >
+                  Add to Cart
+                </button>
+              </>
+            )}
           </div>
 
           <div className="mt-auto">

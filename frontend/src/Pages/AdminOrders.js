@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Toast from '../components/Toast';
+import ConfirmModal from '../components/ConfirmModal';
 import authFetch from '../utils/authFetch';
 
 const STATUS_OPTIONS = [
@@ -35,6 +36,8 @@ function AdminOrders() {
   const [cancelModal, setCancelModal] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [imageModal, setImageModal] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
 
   const showToast = (message, type = 'info') => {
     setToast({ message, type });
@@ -64,14 +67,19 @@ function AdminOrders() {
   };
 
   const handlePermanentDelete = (id) => {
-    if (!window.confirm("PERMANENTLY DELETE this order from the database? This cannot be undone.")) return;
+    setOrderToDelete(id);
+    setShowDeleteModal(true);
+  };
 
-    authFetch(`/api/orders/${id}`, {
+  const confirmPermanentDelete = () => {
+    if (!orderToDelete) return;
+
+    authFetch(`/api/orders/${orderToDelete}`, {
       method: 'DELETE',
     })
       .then(res => {
         if (res.ok) {
-          setOrders(orders.filter(o => o._id !== id));
+          setOrders(orders.filter(o => o._id !== orderToDelete));
           showToast("Order permanently deleted", "success");
         } else {
           return res.json().then(data => {
@@ -488,7 +496,7 @@ function AdminOrders() {
                               )}
                               <div className="flex items-center gap-2">
                                 <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                                  ${Number(item.price || 0).toFixed(2)}
+                                  ₹{Number(item.price || 0).toFixed(2)}
                                 </span>
                               </div>
                             </div>
@@ -631,6 +639,18 @@ function AdminOrders() {
           </div>
         </div>
       )}
+      
+      {/* Permanent Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmPermanentDelete}
+        title="Permanently Delete Order?"
+        message="This will permanently delete this order from the database. This action cannot be undone."
+        confirmText="Delete Permanently"
+        cancelText="Cancel"
+        type="danger"
+      />
     </div>
   );
 }

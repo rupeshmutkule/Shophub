@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import API_BASE_URL from "../config/api";
 
-function Proceed({ cartItems = [], onPlaceOrder, user }) {
+function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
   const navigate = useNavigate();
-  const total = cartItems.reduce((sum, item) => sum + Number(item.price), 0);
+  const location = useLocation();
+  
+  // Check if single item purchase
+  const singleItem = location.state?.singleItem;
+  const itemsToPurchase = singleItem ? [singleItem] : cartItems;
+  const total = itemsToPurchase.reduce((sum, item) => sum + Number(item.price), 0);
   
   const [formData, setFormData] = useState({
     fullName: user ? `${user.firstName} ${user.lastName}` : '',
@@ -34,7 +39,7 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (cartItems.length === 0) {
+    if (itemsToPurchase.length === 0) {
       alert("Your cart is empty!");
       return;
     }
@@ -45,7 +50,7 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
         address: formData.address,
         city: formData.city,
         zip: formData.zip,
-        items: cartItems,
+        items: itemsToPurchase,
         total: total
     };
 
@@ -60,15 +65,19 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
         const data = await response.json();
 
         if (response.ok) {
-             // Call the parent handler to clear the cart
-            if (onPlaceOrder) {
+             // Call the parent handler to clear the cart or remove single item
+            if (singleItem && onRemoveSingleItem) {
+                // Remove only the purchased item from cart
+                onRemoveSingleItem(singleItem);
+            } else if (onPlaceOrder) {
+                // Clear entire cart
                 onPlaceOrder();
             }
             
             // Redirect to the Order Confirmation page with order details
             navigate('/placeorder', { 
                 state: { 
-                orderItems: cartItems, 
+                orderItems: itemsToPurchase, 
                 orderTotal: total,
                 customerName: formData.fullName
                 } 
@@ -86,7 +95,14 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Checkout</h2>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-bold text-gray-900">Checkout</h2>
+          {singleItem && (
+            <p className="text-sm text-indigo-600 font-semibold mt-2">
+              🛒 Purchasing Single Item
+            </p>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           
@@ -163,10 +179,10 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
               <h3 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h3>
               
               <div className="space-y-4 mb-6 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                {cartItems.length === 0 ? (
+                {itemsToPurchase.length === 0 ? (
                   <p className="text-gray-500 text-center py-4">Your cart is empty.</p>
                 ) : (
-                  cartItems.map((item, index) => (
+                  itemsToPurchase.map((item, index) => (
                     <div key={index} className="flex gap-4 items-center">
                       <div className="relative">
                         <img 
@@ -189,7 +205,7 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
                         )}
                         <p className="text-xs text-gray-500">Qty: 1</p>
                       </div>
-                      <span className="font-bold text-gray-900">${Number(item.price).toFixed(2)}</span>
+                      <span className="font-bold text-gray-900">₹{Number(item.price).toFixed(2)}</span>
                     </div>
                   ))
                 )}
@@ -198,7 +214,7 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
               <div className="border-t border-gray-100 pt-4 space-y-2">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
@@ -206,14 +222,14 @@ function Proceed({ cartItems = [], onPlaceOrder, user }) {
                 </div>
                 <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t border-gray-100 mt-2">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>₹{total.toFixed(2)}</span>
                 </div>
               </div>
 
               <button 
                 type="submit" 
                 form="checkout-form"
-                disabled={cartItems.length === 0}
+                disabled={itemsToPurchase.length === 0}
                 className="w-full mt-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-lg transform hover:scale-[1.01] transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Place Order

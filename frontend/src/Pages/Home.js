@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom';
+import SuccessToast from '../components/SuccessToast';
 import API_BASE_URL from "../config/api";
 
 const FAKESTORE_URL = "https://fakestoreapi.com/products?limit=50";
@@ -17,6 +18,7 @@ const storeCategoryLabel = (name) => {
     case "tumblers": return "Tumblers";
     case "glassware": return "Glassware";
     case "crockery": return "Crockery";
+    case "cups": return "Cups";
     default: return name;
   }
 };
@@ -24,11 +26,15 @@ const storeCategoryLabel = (name) => {
 function Home({ products = [], onAddToCart, user, onProductUpdate }) {
   const navigate = useNavigate();
   const [fakeStoreProducts, setFakeStoreProducts] = React.useState([]);
+  const [mongoProducts, setMongoProducts] = React.useState([]);
   const [loadingFake, setLoadingFake] = React.useState(true);
+  const [loadingMongo, setLoadingMongo] = React.useState(true);
   const [showBuyModal, setShowBuyModal] = React.useState(false);
   const [showDetailsModal, setShowDetailsModal] = React.useState(false);
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState(null);
+  const [selectedCategory, setSelectedCategory] = React.useState('all');
+  const [showUpdateToast, setShowUpdateToast] = React.useState(false);
   
   // Edit Form State
   const [editFormData, setEditFormData] = React.useState({
@@ -109,7 +115,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
         });
 
         if (response.ok) {
-            alert("Product updated successfully!");
+            setShowUpdateToast(true);
             setShowEditModal(false);
             if (onProductUpdate) onProductUpdate();
         } else {
@@ -212,19 +218,87 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
     };
   }, []);
 
+  // Fetch MongoDB products
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadMongoProducts = async () => {
+      setLoadingMongo(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/products`);
+        const data = await res.json();
+        if (!cancelled && Array.isArray(data)) {
+          // Transform MongoDB products to match FakeStore format
+          const transformed = data.map(p => ({
+            id: p._id,
+            _id: p._id,
+            title: p.name,
+            name: p.name,
+            price: p.price,
+            description: p.description,
+            image: p.photo,
+            photo: p.photo,
+            rating: { rate: p.rating, count: 0 },
+            category: 'custom', // Mark as custom product
+            isMongoProduct: true
+          }));
+          setMongoProducts(transformed);
+        }
+      } catch (err) {
+        console.error('Error loading MongoDB products:', err);
+        if (!cancelled) setMongoProducts([]);
+      } finally {
+        if (!cancelled) setLoadingMongo(false);
+      }
+    };
+    loadMongoProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, [onProductUpdate]);
+
+  // Combine all products
+  const allProducts = React.useMemo(() => {
+    return [...fakeStoreProducts, ...mongoProducts];
+  }, [fakeStoreProducts, mongoProducts]);
+
   const byStoreCategory = React.useMemo(() => {
     const grouped = {
       "t-shirts": [],
       tumblers: [],
       glassware: [],
       crockery: [],
+      cups: [],
     };
-    fakeStoreProducts.forEach((p) => {
-      const key = mapApiCategoryToStore(p.category);
-      if (grouped[key]) grouped[key].push(p);
+    allProducts.forEach((p) => {
+      // MongoDB products go to all categories
+      if (p.isMongoProduct) {
+        Object.keys(grouped).forEach(key => {
+          grouped[key].push(p);
+        });
+      } else {
+        const key = mapApiCategoryToStore(p.category);
+        if (grouped[key]) grouped[key].push(p);
+      }
     });
     return grouped;
-  }, [fakeStoreProducts]);
+  }, [allProducts]);
+
+  // Filtered products based on selected category
+  const filteredProducts = React.useMemo(() => {
+    if (selectedCategory === 'all') {
+      return allProducts;
+    }
+    return byStoreCategory[selectedCategory] || [];
+  }, [selectedCategory, allProducts, byStoreCategory]);
+
+  const categories = [
+    { id: 'all', name: 'All Products', icon: '🛍️' },
+    { id: 't-shirts', name: 'T-Shirts', icon: '👕' },
+    { id: 'tumblers', name: 'Tumblers', icon: '🥤' },
+    { id: 'glassware', name: 'Glassware', icon: '🍷' },
+    { id: 'crockery', name: 'Crockery', icon: '🍽️' },
+    { id: 'cups', name: 'Cups', icon: '☕' },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8 relative">
@@ -245,53 +319,82 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
           </div>
         </div>
 
-        {/* Category Sections from FakeStore */}
-        {["t-shirts", "tumblers", "glassware", "crockery"].map((key) => {
-          const items = byStoreCategory[key] || [];
-          const limited = items.slice(0, 12);
-          return (
-            <section key={key} className="mb-12">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800">
-                    {storeCategoryLabel(key)}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    Discover curated {storeCategoryLabel(key).toLowerCase()} from our catalog.
-                  </p>
-                </div>
-                <button
-                  onClick={() => navigate(`/category/${key}`)}
-                  className="px-4 py-2 text-sm font-bold rounded-xl bg-white border border-gray-200 text-gray-800 hover:border-indigo-500 hover:text-indigo-600 transition-all"
-                >
-                  View All
-                </button>
-              </div>
-
-              {loadingFake ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="bg-white rounded-2xl shadow animate-pulse p-4 h-64 flex flex-col"
-                    >
-                      <div className="bg-gray-200 rounded-xl h-32 mb-3" />
-                      <div className="bg-gray-200 h-4 mb-2 rounded" />
-                      <div className="bg-gray-200 h-4 mb-2 rounded w-2/3" />
-                      <div className="mt-auto flex gap-2">
-                        <div className="bg-gray-200 h-8 rounded flex-1" />
-                        <div className="bg-gray-200 h-8 rounded flex-1" />
-                      </div>
+        {/* Category Filter Section */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Shop by Category</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => {
+                  if (category.id === 'all') {
+                    setSelectedCategory('all');
+                  } else {
+                    navigate(`/category/${category.id}`);
+                  }
+                }}
+                className={`
+                  relative overflow-hidden rounded-2xl p-6 transition-all duration-300 transform hover:scale-105 hover:shadow-xl
+                  ${selectedCategory === category.id 
+                    ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg scale-105' 
+                    : 'bg-white text-gray-800 shadow-md hover:shadow-lg'
+                  }
+                `}
+              >
+                <div className="text-center">
+                  <div className="text-4xl mb-2">{category.icon}</div>
+                  <p className="font-bold text-sm">{category.name}</p>
+                  {selectedCategory === category.id && (
+                    <div className="absolute top-2 right-2">
+                      <svg className="w-5 h-5 text-yellow-300" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
                     </div>
-                  ))}
+                  )}
                 </div>
-              ) : limited.length === 0 ? (
-                <div className="bg-white rounded-2xl shadow p-6 text-gray-500 text-sm">
-                  No products available in this category yet.
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Products Grid Section */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-800">
+                {selectedCategory === 'all' ? 'All Products' : storeCategoryLabel(selectedCategory)}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found
+              </p>
+            </div>
+          </div>
+
+          {loadingFake || loadingMongo ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl shadow animate-pulse p-4 h-80 flex flex-col"
+                >
+                  <div className="bg-gray-200 rounded-xl h-48 mb-3" />
+                  <div className="bg-gray-200 h-4 mb-2 rounded" />
+                  <div className="bg-gray-200 h-4 mb-2 rounded w-2/3" />
+                  <div className="mt-auto flex gap-2">
+                    <div className="bg-gray-200 h-10 rounded flex-1" />
+                    <div className="bg-gray-200 h-10 rounded flex-1" />
+                  </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {limited.map((product) => (
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+              <div className="text-6xl mb-4">📦</div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">No Products Found</h3>
+              <p className="text-gray-500">Try selecting a different category</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">{filteredProducts.map((product) => (
                     <div 
                       key={product.id} 
                       onClick={() => handleCardClick(product)}
@@ -346,7 +449,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                       <div>
                         <p className="text-xs text-gray-500 font-medium mb-1">Price</p>
                         <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                          ${Number(product.price).toFixed(2)}
+                          ₹{Number(product.price).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -387,9 +490,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                   ))}
                 </div>
               )}
-            </section>
-          );
-        })}
+        </section>
       </div>
 
       {/* Product Details Modal */}
@@ -423,7 +524,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                
                <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
                  <span className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                   ${Number(selectedProduct.price).toFixed(2)}
+                   ₹{Number(selectedProduct.price).toFixed(2)}
                  </span>
                  <div className="flex items-center bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-full font-bold text-sm shadow-md">
                    <svg className="w-4 h-4 fill-current mr-1" viewBox="0 0 20 20">
@@ -492,7 +593,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Price ($)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Price (₹)</label>
                     <input 
                       type="number" 
                       name="price"
@@ -581,7 +682,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
             <div className="p-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Buy {selectedProduct.title || selectedProduct.name}</h3>
               <p className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent font-bold text-2xl mb-6">
-                ${Number(selectedProduct.price).toFixed(2)}
+                ₹{Number(selectedProduct.price).toFixed(2)}
               </p>
               
               <form onSubmit={handleBuySubmit} className="space-y-4">
@@ -686,6 +787,14 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
           animation: slideUp 0.4s ease-out;
         }
       `}</style>
+
+      {/* Product Update Success Toast */}
+      <SuccessToast
+        message="Product updated successfully!"
+        isOpen={showUpdateToast}
+        onClose={() => setShowUpdateToast(false)}
+        duration={2000}
+      />
     </div>
   );
 }

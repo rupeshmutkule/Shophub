@@ -129,118 +129,196 @@ function CategoryPage() {
         )}
 
         {/* Filters & Sorting */}
-        <div className="bg-white rounded-2xl shadow-lg p-4 mb-8 flex flex-wrap gap-4 items-end">
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">
-              Min Price
-            </label>
-            <input
-              type="number"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-              className="w-28 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">Filters & Sorting</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Min Price */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Min Price (₹)
+              </label>
+              <input
+                type="number"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                placeholder="0"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+
+            {/* Max Price */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Max Price (₹)
+              </label>
+              <input
+                type="number"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                placeholder="1000"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+
+            {/* Min Rating */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Min Rating (0-5)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                value={minRating}
+                onChange={(e) => setMinRating(e.target.value)}
+                placeholder="0"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
+
+            {/* Sort By */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Sort By
+              </label>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-300 bg-white cursor-pointer"
+              >
+                <option value="price_asc">Price: Low to High</option>
+                <option value="price_desc">Price: High to Low</option>
+                <option value="rating_desc">Rating: High to Low</option>
+              </select>
+            </div>
+
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">
-              Max Price
-            </label>
-            <input
-              type="number"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              className="w-28 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">
-              Min Rating
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="5"
-              step="0.1"
-              value={minRating}
-              onChange={(e) => setMinRating(e.target.value)}
-              className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">
-              Sort By
-            </label>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option value="price_asc">Price: Low to High</option>
-              <option value="price_desc">Price: High to Low</option>
-              <option value="rating_desc">Rating: High to Low</option>
-            </select>
-          </div>
+
+          {/* Clear Filters Button */}
+          {(minPrice || maxPrice || minRating) && (
+            <div className="mt-4">
+              <button
+                onClick={() => {
+                  setMinPrice('');
+                  setMaxPrice('');
+                  setMinRating('');
+                }}
+                className="px-4 py-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+              >
+                Clear All Filters
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Product grid */}
         {paged.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-lg p-10 text-center text-gray-500">
-            No products match your filters.
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <div className="text-6xl mb-4">📦</div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">No Products Found</h3>
+            <p className="text-gray-500">Try adjusting your filters</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {paged.map((p) => (
-              <div
-                key={p.id}
-                className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer flex flex-col"
-                onClick={() => handleProductClick(p.id)}
-              >
-                <div className="relative h-56 bg-gray-50 overflow-hidden">
-                  <img
-                    src={p.image}
-                    alt={p.title}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                </div>
-                <div className="p-4 flex flex-col flex-1">
-                  <h3 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2">
-                    {p.title}
-                  </h3>
-                  <p className="text-xs text-gray-500 mb-2 line-clamp-2">{p.description}</p>
-                  <div className="mt-auto flex items-center justify-between">
-                    <span className="text-lg font-extrabold text-indigo-700">
-                      ₹{Number(p.price).toFixed(2)}
-                    </span>
-                    <span className="text-xs font-semibold text-yellow-600 flex items-center gap-1">
-                      ★ {p.rating?.rate ?? 0}
-                    </span>
+          <>
+            <div className="mb-4 text-sm text-gray-600">
+              Showing {paged.length} of {filteredSorted.length} products
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+              {paged.map((p) => (
+                <div
+                  key={p.id}
+                  className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer transform hover:-translate-y-2"
+                  onClick={() => handleProductClick(p.id)}
+                >
+                  {/* Gradient Overlay on Hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-purple-500/0 group-hover:from-indigo-500/5 group-hover:to-purple-500/5 transition-all duration-500 z-10 pointer-events-none"></div>
+                  
+                  {/* Product Image */}
+                  <div className="relative h-56 bg-gradient-to-br from-gray-100 to-gray-200 overflow-hidden">
+                    <img
+                      src={p.image}
+                      alt={p.title}
+                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700 p-4"
+                      loading="lazy"
+                    />
+                    
+                    {/* Gradient Overlay on Image */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    
+                    {/* Rating Badge */}
+                    <div className="absolute top-3 right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1 transform group-hover:scale-110 transition-transform duration-300">
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                        <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z"/>
+                      </svg>
+                      <span>{p.rating?.rate ?? 0}</span>
+                    </div>
+
+                    {/* Quick View Badge */}
+                    <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md text-gray-800 px-3 py-1 rounded-full text-xs font-semibold opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                      👁️ Quick View
+                    </div>
+                  </div>
+
+                  {/* Product Info */}
+                  <div className="p-5 flex flex-col">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1 group-hover:text-indigo-600 transition-colors duration-300" title={p.title}>
+                      {p.title}
+                    </h3>
+                    
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 min-h-[2.5rem] leading-relaxed">
+                      {p.description}
+                    </p>
+                    
+                    <div className="mt-auto space-y-3">
+                      {/* Price Section */}
+                      <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium mb-1">Price</p>
+                          <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                            ₹{Number(p.price).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* View Details Button */}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProductClick(p.id);
+                        }}
+                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 text-sm font-bold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                      >
+                        View Details
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
 
         {/* Pagination */}
         {pageCount > 1 && (
-          <div className="mt-8 flex justify-center items-center gap-2">
+          <div className="mt-10 flex justify-center items-center gap-3">
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white disabled:opacity-40"
+              className="px-5 py-3 text-sm font-bold rounded-xl bg-white border-2 border-gray-200 text-gray-800 hover:border-indigo-500 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 shadow-md hover:shadow-lg"
             >
-              Prev
+              ← Previous
             </button>
-            <span className="text-sm font-semibold text-gray-700">
+            <span className="px-6 py-3 text-sm font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl shadow-lg">
               Page {page} of {pageCount}
             </span>
             <button
               disabled={page === pageCount}
               onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-              className="px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white disabled:opacity-40"
+              className="px-5 py-3 text-sm font-bold rounded-xl bg-white border-2 border-gray-200 text-gray-800 hover:border-indigo-500 hover:text-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 shadow-md hover:shadow-lg"
             >
-              Next
+              Next →
             </button>
           </div>
         )}

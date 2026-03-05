@@ -1,8 +1,19 @@
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
+import ConfirmModal from "./ConfirmModal";
 
 function Navbar({ cartCount = 0, user, onLogout }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    onLogout();
+    setShowLogoutModal(false);
+  };
 
   const linkClass = ({ isActive }) =>
     `px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
@@ -174,7 +185,7 @@ function Navbar({ cartCount = 0, user, onLogout }) {
                   </div>
                   
                   <button 
-                    onClick={onLogout}
+                    onClick={handleLogoutClick}
                     className="px-4 py-2 text-sm font-bold text-red-600 border-2 border-red-200 rounded-xl hover:bg-red-50 hover:border-red-400 transition-all duration-300 flex items-center gap-2"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -349,7 +360,7 @@ function Navbar({ cartCount = 0, user, onLogout }) {
                   </div>
                   
                   <button 
-                    onClick={() => { onLogout(); setIsMenuOpen(false); }}
+                    onClick={() => { handleLogoutClick(); setIsMenuOpen(false); }}
                     className="w-full px-6 py-3 border-2 border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 hover:border-red-400 transition-all duration-300 flex items-center justify-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,6 +374,18 @@ function Navbar({ cartCount = 0, user, onLogout }) {
           </div>
         </div>
       )}
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+        title="Logout Confirmation"
+        message="Are you sure you want to logout from your account?"
+        confirmText="Logout"
+        cancelText="Stay Logged In"
+        type="warning"
+      />
 
       <style jsx>{`
         @keyframes slideDown {
