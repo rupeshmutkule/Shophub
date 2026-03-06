@@ -123,13 +123,22 @@ function ProductDetails({ onAddToCart, user }) {
       price: product.price,
       rating: product.rating?.rate ?? 0,
       photo: product.image,
+      image: product.image, // Store both photo and image for compatibility
       description: product.description,
       fakestoreId: product.id,
       ...(isClothing && { size: selectedSize }),
       quantity: selectedQuantity,
     };
+    
+    console.log('🛒 Adding to cart:', {
+      name: normalized.name,
+      photo: normalized.photo,
+      image: normalized.image,
+      hasImage: !!(normalized.photo || normalized.image)
+    });
+    
     onAddToCart(normalized);
-    alert('✅ Added to cart!');
+    // Alert removed - parent component (App.js) already shows a toast notification
   };
 
   const handleBuyNowClick = () => {
@@ -146,11 +155,20 @@ function ProductDetails({ onAddToCart, user }) {
       price: product.price,
       rating: product.rating?.rate ?? 0,
       photo: product.image,
+      image: product.image, // Store both photo and image for compatibility
       description: product.description,
       fakestoreId: product.id,
       ...(isClothing && { size: selectedSize }),
       quantity: selectedQuantity,
     };
+    
+    console.log('🛒 Buy Now - Item:', {
+      name: normalized.name,
+      photo: normalized.photo,
+      image: normalized.image,
+      hasImage: !!(normalized.photo || normalized.image)
+    });
+    
     navigate('/proceed', { state: { singleItem: normalized } });
   };
 

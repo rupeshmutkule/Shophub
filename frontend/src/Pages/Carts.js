@@ -29,6 +29,7 @@ function Carts({ cartItems = [], onRemoveFromCart, onAddOneToCart, onBuyNow }) {
   const [itemToRemove, setItemToRemove] = useState(null);
   const [designModal, setDesignModal] = useState(null);
   const [designIndex, setDesignIndex] = useState(0);
+  const [imageModal, setImageModal] = useState(null); // For regular product images
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [tempSize, setTempSize] = useState('M');
@@ -123,6 +124,12 @@ function Carts({ cartItems = [], onRemoveFromCart, onAddOneToCart, onBuyNow }) {
                           if (item.isCustomized && (item.frontDesignUrl || item.backDesignUrl)) {
                             setDesignModal(item);
                             setDesignIndex(0);
+                          } else {
+                            // Show regular product image
+                            const imageUrl = item.photo || item.image || item.customizationPreview;
+                            if (imageUrl && !imageUrl.includes('placeholder')) {
+                              setImageModal(imageUrl);
+                            }
                           }
                         }}
                         onError={(e) => { e.target.src = 'https://via.placeholder.com/100?text=Error'; }}
@@ -380,6 +387,27 @@ function Carts({ cartItems = [], onRemoveFromCart, onAddOneToCart, onBuyNow }) {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Regular Image Modal */}
+      {imageModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setImageModal(null)}>
+          <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setImageModal(null)}
+              className="absolute -top-4 -right-4 bg-white text-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-100 transition z-10"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img 
+              src={imageModal} 
+              alt="Product" 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
           </div>
         </div>
       )}

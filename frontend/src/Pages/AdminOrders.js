@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Toast from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
 import authFetch from '../utils/authFetch';
+import { getOrderItemImage } from '../utils/imageUtils';
 
 const STATUS_OPTIONS = [
   'order_received',
@@ -51,6 +52,8 @@ function AdminOrders() {
 
   useEffect(() => {
     fetchOrders();
+    // Scroll to top when page loads
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const fetchOrders = () => {
@@ -447,7 +450,7 @@ function AdminOrders() {
                           >
                             <div className="relative">
                               <img 
-                                src={item.customizationPreview || item.customDesignUrl || item.photo || item.image || 'https://via.placeholder.com/100?text=Product'} 
+                                src={getOrderItemImage(item)} 
                                 alt={item.name || item.title || 'Product image'}
                                 width="96"
                                 height="96"

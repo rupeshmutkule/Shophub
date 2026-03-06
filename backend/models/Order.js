@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const orderItemSchema = new mongoose.Schema(
   {
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', index: true },
+    productId: { type: String, index: true }, // Changed to String to support both MongoDB IDs and external IDs
     productName: { type: String }, // snapshot
     quantity: { type: Number, min: 1 },
     size: { type: String }, // Direct size field for easy access

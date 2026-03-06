@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import API_BASE_URL from "../config/api";
+import { getOrderItemImage } from '../utils/imageUtils';
 
 function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
   const navigate = useNavigate();
@@ -10,6 +11,25 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
   const singleItem = location.state?.singleItem;
   const itemsToPurchase = singleItem ? [singleItem] : cartItems;
   const total = itemsToPurchase.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
+  
+  // Debug: Log items when component loads
+  React.useEffect(() => {
+    console.log('🛒 Proceed Page Loaded');
+    console.log('   Single Item Mode:', !!singleItem);
+    console.log('   Cart Items Count:', cartItems.length);
+    console.log('   Items to Purchase:', itemsToPurchase.length);
+    console.log('   Full Items Data:', itemsToPurchase);
+    
+    itemsToPurchase.forEach((item, idx) => {
+      console.log(`   Item ${idx + 1}:`, {
+        name: item.name,
+        price: item.price,
+        image: item.image || 'MISSING',
+        photo: item.photo || 'MISSING',
+        hasAnyImage: !!(item.image || item.photo || item.frontDesignUrl || item.customizationPreview)
+      });
+    });
+  }, [singleItem, cartItems, itemsToPurchase]);
   
   const [formData, setFormData] = useState({
     fullName: user ? `${user.firstName} ${user.lastName}` : '',
@@ -25,6 +45,7 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
 
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('razorpay'); // razorpay, cod, card
+  const [imageModal, setImageModal] = useState(null); // For viewing images
 
   // Update form if user switches without page reload
   React.useEffect(() => {
@@ -218,21 +239,56 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
 
   // Common order creation function
   const createOrder = async (paymentData) => {
-    // Group items by product and add quantity
-    const groupedItems = {};
-    itemsToPurchase.forEach(item => {
-      const key = `${item.name}-${item.price}-${item.photo || item.image}`;
-      if (!groupedItems[key]) {
-        groupedItems[key] = {
-          ...item,
-          quantity: 1
-        };
-      } else {
-        groupedItems[key].quantity += 1;
-      }
+    // Map items to ensure all required fields are present
+    const orderItems = itemsToPurchase.map(item => {
+      // Get the best available image URL
+      const imageUrl = item.image || item.photo || item.frontDesignUrl || item.customizationPreview || item.customDesignUrl || item.backDesignUrl;
+      
+      return {
+        // Product identification
+        productId: item._id || item.productId || item.fakestoreId,
+        name: item.name || item.title,
+        title: item.title || item.name,
+        
+        // Pricing
+        price: Number(item.price),
+        quantity: item.quantity || 1,
+        
+        // CRITICAL: Image fields - only set if we have a valid URL
+        ...(imageUrl && {
+          image: imageUrl,
+          photo: imageUrl
+        }),
+        
+        // Customization fields - only include if they exist
+        isCustomized: item.isCustomized || false,
+        ...(item.customizationPreview && { customizationPreview: item.customizationPreview }),
+        ...(item.customDesignUrl && { customDesignUrl: item.customDesignUrl }),
+        ...(item.frontDesignUrl && { frontDesignUrl: item.frontDesignUrl }),
+        ...(item.backDesignUrl && { backDesignUrl: item.backDesignUrl }),
+        
+        // Additional fields
+        ...(item.size && { size: item.size }),
+        ...(item.description && { description: item.description }),
+        ...(item.rating && { rating: item.rating })
+      };
     });
     
-    const itemsWithQuantity = Object.values(groupedItems);
+    // Debug: Log what we're sending to backend
+    console.log('📤 Creating Order - Sending to Backend:');
+    console.log('   Items count:', orderItems.length);
+    orderItems.forEach((item, idx) => {
+      console.log(`   Item ${idx + 1}:`, {
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        photo: item.photo || 'NOT SET',
+        image: item.image || 'NOT SET',
+        frontDesignUrl: item.frontDesignUrl || 'NOT SET',
+        backDesignUrl: item.backDesignUrl || 'NOT SET',
+        isCustomized: item.isCustomized
+      });
+    });
     
     const orderData = {
       customerName: formData.fullName,
@@ -241,10 +297,12 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
       address: formData.address,
       city: formData.city,
       zip: formData.zip,
-      items: itemsWithQuantity,
+      items: orderItems,
       total: total,
       ...paymentData
     };
+    
+    console.log('📤 Full Order Data:', orderData);
 
     const orderResponse = await fetch(`${API_BASE_URL}/api/orders`, {
       method: 'POST',
@@ -548,13 +606,54 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
                 {itemsToPurchase.length === 0 ? (
                   <p className="text-gray-500 text-center py-4">Your cart is empty.</p>
                 ) : (
-                  itemsToPurchase.map((item, index) => (
+                  itemsToPurchase.map((item, index) => {
+                    // Comprehensive image fallback
+                    const imageUrl = 
+                      item.frontDesignUrl ||
+                      item.customizationPreview ||
+                      item.customDesignUrl ||
+                      item.image ||
+                      item.photo ||
+                      (item.images && item.images.length > 0 ? (typeof item.images[0] === 'string' ? item.images[0] : item.images[0]?.url) : null) ||
+                      item.backDesignUrl ||
+                      'https://via.placeholder.com/60?text=Product';
+                    
+                    // Debug logging
+                    console.log('🖼️ Proceed Order Summary - Item #' + (index + 1) + ':', {
+                      name: item.name,
+                      finalImageUrl: imageUrl,
+                      itemFields: {
+                        image: item.image || 'NOT SET',
+                        photo: item.photo || 'NOT SET',
+                        frontDesignUrl: item.frontDesignUrl || 'NOT SET',
+                        customizationPreview: item.customizationPreview || 'NOT SET',
+                        customDesignUrl: item.customDesignUrl || 'NOT SET',
+                        backDesignUrl: item.backDesignUrl || 'NOT SET',
+                        hasImages: !!(item.images && item.images.length > 0)
+                      },
+                      fullItem: item
+                    });
+                    
+                    return (
                     <div key={index} className="flex gap-4 items-center">
                       <div className="relative">
                         <img 
-                          src={item.customizationPreview || item.customDesignUrl || item.photo || 'https://via.placeholder.com/60?text=Prod'} 
-                          alt={item.name} 
-                          className="w-16 h-16 rounded-md object-contain bg-gray-100"
+                          src={imageUrl} 
+                          alt={item.name || 'Product'} 
+                          className="w-16 h-16 rounded-md object-contain bg-gray-100 border border-gray-200 cursor-pointer hover:scale-110 transition-transform"
+                          onClick={() => {
+                            if (imageUrl && !imageUrl.includes('placeholder')) {
+                              setImageModal(imageUrl);
+                            }
+                          }}
+                          onError={(e) => { 
+                            console.error('❌ Image failed to load:', imageUrl);
+                            console.error('   Item:', item.name);
+                            e.target.src = 'https://via.placeholder.com/60?text=No+Image'; 
+                          }}
+                          onLoad={() => {
+                            console.log('✅ Image loaded successfully:', imageUrl);
+                          }}
                         />
                         {item.isCustomized && (
                           <div className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-md">
@@ -592,7 +691,8 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
                         )}
                       </div>
                     </div>
-                  ))
+                  );
+                  })
                 )}
               </div>
 
@@ -646,6 +746,27 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
 
         </div>
       </div>
+
+      {/* Image Modal */}
+      {imageModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setImageModal(null)}>
+          <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setImageModal(null)}
+              className="absolute -top-4 -right-4 bg-white text-gray-800 rounded-full p-2 shadow-lg hover:bg-gray-100 transition z-10"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img 
+              src={imageModal} 
+              alt="Product" 
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

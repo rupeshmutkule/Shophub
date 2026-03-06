@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import API_BASE_URL from "../config/api";
 import Toast from '../components/Toast';
 import authFetch from '../utils/authFetch';
+import { getOrderItemImage } from '../utils/imageUtils';
 
 function YourOrders({ user }) {
   const [orders, setOrders] = useState([]);
@@ -26,6 +27,9 @@ function YourOrders({ user }) {
 
   useEffect(() => {
     setLoading(true);
+    
+    // Scroll to top when page loads
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
     // Build URL with email query param if user is logged in
     let url = `${API_BASE_URL}/api/orders`;
@@ -232,31 +236,23 @@ function YourOrders({ user }) {
                            <div key={idx} className="flex items-start sm:items-center gap-3 sm:gap-4 bg-gray-50 p-3 rounded-lg">
                              <div className="relative flex-shrink-0">
                                <img 
-                                 src={item.customizationPreview || item.customDesignUrl || item.photo || item.image || 'https://via.placeholder.com/50?text=?'} 
+                                 src={getOrderItemImage(item)} 
                                  alt={item.name || item.title || 'Product image'}
                                  width="48"
                                  height="48"
                                  className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded bg-white border border-gray-200 cursor-pointer hover:scale-110 transition-transform"
                                  onClick={() => {
-                                   console.log('🖼️ Item clicked:', {
-                                     name: item.name,
-                                     isCustomized: item.isCustomized,
-                                     frontDesignUrl: item.frontDesignUrl,
-                                     backDesignUrl: item.backDesignUrl,
-                                     customizationPreview: item.customizationPreview,
-                                     customDesignUrl: item.customDesignUrl
-                                   });
                                    if (item.isCustomized && (item.frontDesignUrl || item.backDesignUrl)) {
                                      setDesignModal(item);
                                      setDesignIndex(0);
                                    } else {
-                                     const imageUrl = item.customizationPreview || item.customDesignUrl || item.photo || item.image;
+                                     const imageUrl = getOrderItemImage(item);
                                      if (imageUrl) {
                                        setImageModal(imageUrl);
                                      }
                                    }
                                  }}
-                                 onError={(e) => { e.target.src = 'https://via.placeholder.com/50?text=?'; }}
+                                 onError={(e) => { e.target.src = 'https://via.placeholder.com/100x100?text=Product'; }}
                                />
                                {item.isCustomized && (
                                  <div className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[8px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded-full shadow-md">

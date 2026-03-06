@@ -2,37 +2,53 @@ import Order from '../models/Order.js';
 
 export const createOrder = async (req, res) => {
   try {
+    console.log('\n========================================');
+    console.log('🔍 CREATE ORDER - FULL DEBUG TRACE');
+    console.log('========================================');
+    
+    // Log raw request body
+    console.log('\n1️⃣ RAW REQUEST BODY:');
+    console.log('   Items received:', req.body.items?.length || 0);
+    
+    if (req.body.items && req.body.items.length > 0) {
+      console.log('\n2️⃣ FIRST ITEM - RAW FROM FRONTEND:');
+      console.log(JSON.stringify(req.body.items[0], null, 2));
+      
+      console.log('\n3️⃣ IMAGE FIELDS CHECK:');
+      console.log('   item.image:', req.body.items[0].image || '❌ MISSING');
+      console.log('   item.photo:', req.body.items[0].photo || '❌ MISSING');
+      console.log('   item.frontDesignUrl:', req.body.items[0].frontDesignUrl || '❌ MISSING');
+      console.log('   item.backDesignUrl:', req.body.items[0].backDesignUrl || '❌ MISSING');
+      console.log('   item.customizationPreview:', req.body.items[0].customizationPreview || '❌ MISSING');
+    }
+    
     const orderData = {
       ...req.body,
-      sessionId: req.sessionID, // Store session ID with order
+      sessionId: req.sessionID,
     };
 
-    console.log('\n=== CREATE ORDER DEBUG ===');
-    console.log(`📦 Session ID: ${req.sessionID}`);
-    console.log(`👤 User in session:`, req.session.user);
-    console.log(`📧 Order email: ${orderData.email}`);
-    console.log(`👨 Customer: ${orderData.customerName}`);
-    console.log(`💰 Total: ${orderData.total}`);
-    console.log(`📦 Items count: ${orderData.items?.length || 0}`);
-    if (orderData.items && orderData.items.length > 0) {
-      console.log(`📦 First item:`, {
-        name: orderData.items[0].name,
-        price: orderData.items[0].price,
-        isCustomized: orderData.items[0].isCustomized,
-        hasCustomPreview: !!orderData.items[0].customizationPreview,
-        hasCustomDesignUrl: !!orderData.items[0].customDesignUrl,
-        hasFrontDesignUrl: !!orderData.items[0].frontDesignUrl,
-        hasBackDesignUrl: !!orderData.items[0].backDesignUrl
-      });
-      console.log(`🎨 DESIGN URLs:`, {
-        frontDesignUrl: orderData.items[0].frontDesignUrl || 'NOT PROVIDED',
-        backDesignUrl: orderData.items[0].backDesignUrl || 'NOT PROVIDED'
-      });
-    }
-    console.log(`🍪 Cookie header: ${req.headers.cookie}`);
+    console.log('\n4️⃣ ORDER DATA BEFORE SAVE:');
+    console.log('   Customer:', orderData.customerName);
+    console.log('   Email:', orderData.email);
+    console.log('   Total:', orderData.total);
+    console.log('   Items count:', orderData.items?.length);
 
     const newOrder = new Order(orderData);
     await newOrder.save();
+
+    console.log('\n5️⃣ ORDER SAVED TO DATABASE:');
+    console.log('   Order ID:', newOrder._id);
+    
+    if (newOrder.items && newOrder.items.length > 0) {
+      console.log('\n6️⃣ FIRST ITEM - SAVED IN DATABASE:');
+      console.log(JSON.stringify(newOrder.items[0], null, 2));
+      
+      console.log('\n7️⃣ IMAGE FIELDS IN DATABASE:');
+      console.log('   item.image:', newOrder.items[0].image || '❌ NOT SAVED');
+      console.log('   item.photo:', newOrder.items[0].photo || '❌ NOT SAVED');
+      console.log('   item.frontDesignUrl:', newOrder.items[0].frontDesignUrl || '❌ NOT SAVED');
+      console.log('   item.backDesignUrl:', newOrder.items[0].backDesignUrl || '❌ NOT SAVED');
+    }
 
     // Ensure session is saved
     req.session.lastOrderId = newOrder._id.toString();
@@ -43,28 +59,8 @@ export const createOrder = async (req, res) => {
       });
     });
 
-    console.log(`✅ Order created successfully!`);
-    console.log(`   - Order ID: ${newOrder._id}`);
-    console.log(`   - Session ID: ${newOrder.sessionId}`);
-    console.log(`   - Email: ${newOrder.email}`);
-    console.log(`   - Items saved: ${newOrder.items?.length || 0}`);
-    if (newOrder.items && newOrder.items.length > 0) {
-      console.log(`   - First item details:`);
-      console.log(`     * Name: ${newOrder.items[0].name || newOrder.items[0].title}`);
-      console.log(`     * isCustomized: ${newOrder.items[0].isCustomized}`);
-      console.log(`     * customizationPreview: ${newOrder.items[0].customizationPreview ? 'YES' : 'NO'}`);
-      console.log(`     * customDesignUrl: ${newOrder.items[0].customDesignUrl ? 'YES' : 'NO'}`);
-      console.log(`     * frontDesignUrl: ${newOrder.items[0].frontDesignUrl ? 'YES' : 'NO'}`);
-      console.log(`     * backDesignUrl: ${newOrder.items[0].backDesignUrl ? 'YES' : 'NO'}`);
-      if (newOrder.items[0].frontDesignUrl) {
-        console.log(`     * Front URL: ${newOrder.items[0].frontDesignUrl.substring(0, 50)}...`);
-      }
-      if (newOrder.items[0].backDesignUrl) {
-        console.log(`     * Back URL: ${newOrder.items[0].backDesignUrl.substring(0, 50)}...`);
-      }
-    }
-    console.log(`   - Session saved with lastOrderId: ${req.session.lastOrderId}`);
-    console.log('==========================\n');
+    console.log('\n✅ ORDER CREATION COMPLETE');
+    console.log('========================================\n');
 
     res.json({
       message: 'Order placed successfully',
@@ -72,7 +68,8 @@ export const createOrder = async (req, res) => {
       sessionId: req.sessionID
     });
   } catch (err) {
-    console.error('❌ Order creation error:', err);
+    console.error('\n❌ ORDER CREATION ERROR:', err);
+    console.error('========================================\n');
     res.status(500).json({ error: err.message });
   }
 }
@@ -120,14 +117,22 @@ export const getOrders = async (req, res) => {
     console.log(`📦 Found ${orders.length} orders`);
     
     if (orders.length > 0) {
-      console.log(`📋 First order details:`);
-      console.log(`   - ID: ${orders[0]._id}`);
-      console.log(`   - Email: ${orders[0].email}`);
-      console.log(`   - SessionId: ${orders[0].sessionId}`);
-      console.log(`   - Customer: ${orders[0].customerName}`);
-      console.log(`   - Status: ${orders[0].status}`);
+      console.log('\n📋 FIRST ORDER FROM DATABASE:');
+      console.log('   - ID:', orders[0]._id);
+      console.log('   - Email:', orders[0].email);
+      console.log('   - Customer:', orders[0].customerName);
+      console.log('   - Status:', orders[0].status);
+      console.log('   - Items count:', orders[0].items?.length || 0);
+      
       if (orders[0].items && orders[0].items.length > 0) {
-        console.log(`   - First item customized: ${orders[0].items[0].isCustomized || false}`);
+        console.log('\n📦 FIRST ITEM FROM DATABASE:');
+        console.log(JSON.stringify(orders[0].items[0], null, 2));
+        
+        console.log('\n🖼️ IMAGE FIELDS RETURNED:');
+        console.log('   item.image:', orders[0].items[0].image || '❌ MISSING IN DB');
+        console.log('   item.photo:', orders[0].items[0].photo || '❌ MISSING IN DB');
+        console.log('   item.frontDesignUrl:', orders[0].items[0].frontDesignUrl || '❌ MISSING IN DB');
+        console.log('   item.backDesignUrl:', orders[0].items[0].backDesignUrl || '❌ MISSING IN DB');
       }
     }
     console.log('========================\n');
