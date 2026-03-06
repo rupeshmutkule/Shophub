@@ -3,7 +3,14 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
+import LoadingSpinner from "./components/LoadingSpinner";
 import API_BASE_URL from "./config/api";
+import { 
+  loadCartFromStorage, 
+  saveCartToStorage, 
+  clearCartFromStorage, 
+  getUniqueProductsCount 
+} from "./utils/cartUtils";
 
 // Eager load critical pages
 import Home from "./Pages/Home";
@@ -28,16 +35,6 @@ const EditProduct = lazy(() => import("./Pages/EditProduct"));
 const YourOrders = lazy(() => import("./Pages/YourOrders"));
 const About = lazy(() => import("./Pages/About"));
 const Mission = lazy(() => import("./Pages/Mission"));
-
-// Loading fallback component
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gray-50">
-    <div className="text-center">
-      <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-      <p className="text-lg font-semibold text-gray-700">Loading...</p>
-    </div>
-  </div>
-);
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -145,9 +142,7 @@ function App() {
 
   // Load cart from localStorage on mount (guest or user-specific)
   useEffect(() => {
-    const cartKey = user && user.email ? `cart_${user.email}` : 'cart_guest';
-    const savedCart = localStorage.getItem(cartKey);
-    setCart(savedCart ? JSON.parse(savedCart) : []);
+    setCart(loadCartFromStorage(user));
     isInitialLoad.current = true;
   }, [user]);
 
@@ -157,9 +152,7 @@ function App() {
       isInitialLoad.current = false;
       return;
     }
-
-    const cartKey = user && user.email ? `cart_${user.email}` : 'cart_guest';
-    localStorage.setItem(cartKey, JSON.stringify(cart));
+    saveCartToStorage(cart, user);
   }, [cart, user]);
 
   const handleAddToCart = (product) => {
@@ -198,9 +191,8 @@ function App() {
   };
 
   const handlePlaceOrder = () => {
-    setCart([]); // Clear cart after order
-    const cartKey = user && user.email ? `cart_${user.email}` : 'cart_guest';
-    localStorage.removeItem(cartKey);
+    setCart([]);
+    clearCartFromStorage(user);
   };
 
   const refreshProducts = () => {
@@ -214,22 +206,12 @@ function App() {
       });
   };
 
-  // Calculate unique products count for cart badge
-  const getUniqueProductsCount = () => {
-    const uniqueProducts = {};
-    cart.forEach(item => {
-      const key = `${item.name}-${item.price}-${item.photo || item.image}`;
-      uniqueProducts[key] = true;
-    });
-    return Object.keys(uniqueProducts).length;
-  };
-
   return (
     <>
-      <Navbar cartCount={getUniqueProductsCount()} user={user} onLogout={handleLogout} />
+      <Navbar cartCount={getUniqueProductsCount(cart)} user={user} onLogout={handleLogout} />
       <ScrollToTop />
 
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<LoadingSpinner />}>
         <Routes>
           <Route path="/" element={<Home products={products} onAddToCart={handleAddToCart} user={user} onProductUpdate={refreshProducts} />} />
           <Route path="/login" element={<Login onLogin={handleLogin} />} />

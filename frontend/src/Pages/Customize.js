@@ -24,12 +24,38 @@ function Customize({ onAddToCart }) {
   const [backDesignUrl, setBackDesignUrl] = useState(null);
   const [showBothDesigns, setShowBothDesigns] = useState(false);
   const [bothDesignsIndex, setBothDesignsIndex] = useState(0);
-  const [showSizeModal, setShowSizeModal] = useState(false);
-  const [selectedSize, setSelectedSize] = useState('M');
+  const [selectedSize, setSelectedSize] = useState(''); // No default - user must select
   const [selectedQuantity, setSelectedQuantity] = useState(1);
-  const [pendingAddType, setPendingAddType] = useState(null); // 'customized', 'skip', or 'buyNow'
   const [frontCanvasState, setFrontCanvasState] = useState(null); // Store front canvas JSON
   const [backCanvasState, setBackCanvasState] = useState(null); // Store back canvas JSON
+  
+  // Text styling controls
+  const [textColor, setTextColor] = useState('#000000'); // Default black
+  const [fontSize, setFontSize] = useState(28); // Default font size
+  const [fontFamily, setFontFamily] = useState('Arial'); // Default font family
+
+  const isClothing = product && (product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts");
+  
+  // Available font families
+  const fontFamilies = [
+    'Arial',
+    'Helvetica',
+    'Times New Roman',
+    'Georgia',
+    'Courier New',
+    'Verdana',
+    'Comic Sans MS',
+    'Impact',
+    'Trebuchet MS',
+    'Palatino',
+    'Garamond',
+    'Bookman',
+    'Tahoma',
+    'Lucida Console'
+  ];
+  
+  // Note: Customize page doesn't receive user prop, but admins typically don't access customize page
+  // If needed in future, pass user prop from App.js
 
   // Get product images
   const getProductImages = () => {
@@ -113,12 +139,49 @@ function Customize({ onAddToCart }) {
       top: canvas.getHeight() / 2,
       originX: "center",
       originY: "center",
-      fill: "#111827",
-      fontSize: 28,
+      fill: textColor,
+      fontSize: fontSize,
+      fontFamily: fontFamily,
     });
     canvas.add(text);
     canvas.setActiveObject(text);
     canvas.renderAll();
+  };
+
+  // Update selected text color
+  const handleTextColorChange = (color) => {
+    setTextColor(color);
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject && activeObject.type === 'i-text') {
+      activeObject.set('fill', color);
+      canvas.renderAll();
+    }
+  };
+
+  // Update selected text font size
+  const handleFontSizeChange = (size) => {
+    setFontSize(size);
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject && activeObject.type === 'i-text') {
+      activeObject.set('fontSize', size);
+      canvas.renderAll();
+    }
+  };
+
+  // Update selected text font family
+  const handleFontFamilyChange = (family) => {
+    setFontFamily(family);
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const activeObject = canvas.getActiveObject();
+    if (activeObject && activeObject.type === 'i-text') {
+      activeObject.set('fontFamily', family);
+      canvas.renderAll();
+    }
   };
 
   const handleUploadImage = async (e) => {
@@ -409,77 +472,15 @@ function Customize({ onAddToCart }) {
     }
   };
 
-  const handleAddToCartClick = () => {
-    setPendingAddType('customized');
-    setShowSizeModal(true);
-  };
-
-  const handleSkipAndAddClick = () => {
-    setPendingAddType('skip');
-    setShowSizeModal(true);
-  };
-
-  const handleBuyNowClick = () => {
-    const canvas = fabricRef.current;
-    const hasCustomization = canvas && canvas.getObjects().length > 0;
-    
-    if (hasCustomization) {
-      setPendingAddType('buyCustomized');
-    } else {
-      setPendingAddType('buyNow');
-    }
-    setShowSizeModal(true);
-  };
-
-  const confirmAddToCart = async () => {
+  const handleAddToCartClick = async () => {
     if (!onAddToCart || !product) return;
     
-    setShowSizeModal(false);
+    // Validate size selection for clothing
+    if (isClothing && !selectedSize) {
+      alert('⚠️ Please select a size before adding to cart');
+      return;
+    }
     
-    if (pendingAddType === 'skip') {
-      // Add without customization
-      const isClothing = product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts";
-      const normalized = {
-        name: product.title,
-        price: product.price,
-        rating: product.rating?.rate ?? 0,
-        photo: product.image,
-        description: product.description,
-        fakestoreId: product.id,
-        customDesignUrl: null,
-        isCustomized: false,
-        customizationPreview: null,
-        ...(isClothing && { size: selectedSize }), // Only add size for clothing
-        quantity: selectedQuantity,
-      };
-      
-      onAddToCart(normalized);
-      navigate("/carts");
-      return;
-    }
-
-    if (pendingAddType === 'buyNow') {
-      // Buy now without customization
-      const isClothing = product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts";
-      const normalized = {
-        name: product.title,
-        price: product.price,
-        rating: product.rating?.rate ?? 0,
-        photo: product.image,
-        description: product.description,
-        fakestoreId: product.id,
-        customDesignUrl: null,
-        isCustomized: false,
-        customizationPreview: null,
-        ...(isClothing && { size: selectedSize }), // Only add size for clothing
-        quantity: selectedQuantity,
-      };
-      
-      navigate('/proceed', { state: { singleItem: normalized } });
-      return;
-    }
-
-    // Add with customization (customized or buyCustomized)
     const canvas = fabricRef.current;
     const hasCustomization = canvas && canvas.getObjects().length > 0;
     
@@ -491,18 +492,7 @@ function Customize({ onAddToCart }) {
     setAdding(true);
 
     try {
-      // Use the same composite creation function as Save Preview
       const compositeDataUrl = await createCompositeImage(canvas, currentImage);
-      
-      console.log('🔍 STEP 1: COMPOSITE IMAGE CREATED');
-      console.log('   - Type:', compositeDataUrl.substring(0, 30));
-      console.log('   - Size:', compositeDataUrl.length, 'bytes');
-      console.log('   - Is base64 PNG:', compositeDataUrl.startsWith('data:image/png'));
-      console.log('   - First 100 chars:', compositeDataUrl.substring(0, 100));
-      
-      // Upload composite image to Cloudinary
-      console.log('🔍 STEP 2: UPLOADING TO CLOUDINARY...');
-      console.log('   - Uploading composite (NOT original product image)');
       
       const response = await fetch(`${API_BASE_URL}/api/uploads/custom-design`, {
         method: "POST",
@@ -511,62 +501,139 @@ function Customize({ onAddToCart }) {
       });
       
       const data = await response.json();
-      
-      console.log('🔍 STEP 3: CLOUDINARY RESPONSE');
-      console.log('   - Success:', !!data?.url);
-      console.log('   - Uploaded URL:', data?.url);
-      console.log('   - Full response:', data);
-      
       const uploadedUrl = data?.url || null;
       
       if (!uploadedUrl) {
-        console.error('❌ CRITICAL: Cloudinary did not return a URL!');
         throw new Error('Cloudinary upload failed - no URL returned');
       }
       
-      const isClothing = product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts";
       const normalized = {
         name: product.title,
         price: product.price,
         rating: product.rating?.rate ?? 0,
-        photo: product.image, // Original product image
+        photo: product.image,
         description: product.description,
         fakestoreId: product.id,
-        customDesignUrl: uploadedUrl, // Composite image URL
+        customDesignUrl: uploadedUrl,
         isCustomized: true,
-        customizationPreview: uploadedUrl, // Composite image URL
+        customizationPreview: uploadedUrl,
         frontDesignUrl: frontDesignUrl || null,
         backDesignUrl: backDesignUrl || null,
-        ...(isClothing && { size: selectedSize }), // Only add size for clothing
+        ...(isClothing && { size: selectedSize }),
         quantity: selectedQuantity,
       };
       
-      console.log('🔍 STEP 4: CART ITEM OBJECT');
-      console.log('   - name:', normalized.name);
-      console.log('   - isCustomized:', normalized.isCustomized);
-      console.log('   - photo (original):', normalized.photo);
-      console.log('   - customizationPreview (composite):', normalized.customizationPreview);
-      console.log('   - customDesignUrl (composite):', normalized.customDesignUrl);
-      console.log('   - size:', normalized.size);
-      console.log('   - quantity:', normalized.quantity);
-      console.log('   - Full cart item:', JSON.stringify(normalized, null, 2));
-      
-      console.log('✅ ADDING TO CART WITH COMPOSITE URL');
-      
-      if (pendingAddType === 'buyCustomized') {
-        // Buy now with customization
-        navigate('/proceed', { state: { singleItem: normalized } });
-      } else {
-        // Add to cart with customization
-        onAddToCart(normalized);
-        navigate("/carts");
-      }
+      onAddToCart(normalized);
+      navigate("/carts");
       
     } catch (err) {
       console.error('❌ Error creating composite:', err);
       alert('Failed to create design. Please try again or check console for details.');
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleSkipAndAddClick = () => {
+    if (!onAddToCart || !product) return;
+    
+    // Validate size selection for clothing
+    if (isClothing && !selectedSize) {
+      alert('⚠️ Please select a size before adding to cart');
+      return;
+    }
+    
+    const normalized = {
+      name: product.title,
+      price: product.price,
+      rating: product.rating?.rate ?? 0,
+      photo: product.image,
+      description: product.description,
+      fakestoreId: product.id,
+      customDesignUrl: null,
+      isCustomized: false,
+      customizationPreview: null,
+      ...(isClothing && { size: selectedSize }),
+      quantity: selectedQuantity,
+    };
+    
+    onAddToCart(normalized);
+    navigate("/carts");
+  };
+
+  const handleBuyNowClick = async () => {
+    if (!product) return;
+    
+    // Validate size selection for clothing
+    if (isClothing && !selectedSize) {
+      alert('⚠️ Please select a size before proceeding');
+      return;
+    }
+    
+    const canvas = fabricRef.current;
+    const hasCustomization = canvas && canvas.getObjects().length > 0;
+    
+    if (hasCustomization) {
+      // Buy with customization
+      setAdding(true);
+
+      try {
+        const compositeDataUrl = await createCompositeImage(canvas, currentImage);
+        
+        const response = await fetch(`${API_BASE_URL}/api/uploads/custom-design`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageData: compositeDataUrl }),
+        });
+        
+        const data = await response.json();
+        const uploadedUrl = data?.url || null;
+        
+        if (!uploadedUrl) {
+          throw new Error('Cloudinary upload failed - no URL returned');
+        }
+        
+        const normalized = {
+          name: product.title,
+          price: product.price,
+          rating: product.rating?.rate ?? 0,
+          photo: product.image,
+          description: product.description,
+          fakestoreId: product.id,
+          customDesignUrl: uploadedUrl,
+          isCustomized: true,
+          customizationPreview: uploadedUrl,
+          frontDesignUrl: frontDesignUrl || null,
+          backDesignUrl: backDesignUrl || null,
+          ...(isClothing && { size: selectedSize }),
+          quantity: selectedQuantity,
+        };
+        
+        navigate('/proceed', { state: { singleItem: normalized } });
+        
+      } catch (err) {
+        console.error('❌ Error creating composite:', err);
+        alert('Failed to create design. Please try again or check console for details.');
+      } finally {
+        setAdding(false);
+      }
+    } else {
+      // Buy without customization
+      const normalized = {
+        name: product.title,
+        price: product.price,
+        rating: product.rating?.rate ?? 0,
+        photo: product.image,
+        description: product.description,
+        fakestoreId: product.id,
+        customDesignUrl: null,
+        isCustomized: false,
+        customizationPreview: null,
+        ...(isClothing && { size: selectedSize }),
+        quantity: selectedQuantity,
+      };
+      
+      navigate('/proceed', { state: { singleItem: normalized } });
     }
   };
 
@@ -619,9 +686,135 @@ function Customize({ onAddToCart }) {
             <p className="text-2xl font-extrabold text-indigo-700 mt-2">
               ₹{Number(product.price).toFixed(2)}
             </p>
+
+            {/* Size and Quantity Selection - Always show in Customize page (admins don't typically access this page) */}
+            {/* Size Selection - Only for clothing categories */}
+            {isClothing && (
+              <div className="mt-4 mb-4">
+                <label className="block text-sm font-bold text-gray-700 mb-3">Select Size <span className="text-red-600">*</span></label>
+                <div className="flex gap-2">
+                  {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`w-12 h-12 rounded-lg font-bold text-sm transition-all duration-200 ${
+                        selectedSize === size
+                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-105'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Quantity Selection */}
+            <div className="mb-4">
+              <label className="block text-sm font-bold text-gray-700 mb-3">Select Quantity</label>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
+                  disabled={selectedQuantity === 1}
+                  className={`w-10 h-10 rounded-lg font-bold text-xl transition-colors ${
+                    selectedQuantity === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  −
+                </button>
+                <span className="text-2xl font-bold text-gray-900 min-w-[60px] text-center">
+                  {selectedQuantity}
+                </span>
+                <button
+                  onClick={() => setSelectedQuantity(Math.min(99, selectedQuantity + 1))}
+                  disabled={selectedQuantity === 99}
+                  className={`w-10 h-10 rounded-lg font-bold text-xl transition-colors ${
+                    selectedQuantity === 99
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  +
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="md:w-2/3 flex flex-col gap-4">
+            {/* Text Styling Controls */}
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl p-4">
+              <h3 className="text-sm font-bold text-gray-800 mb-3">✏️ Text Styling</h3>
+              <div className="flex flex-wrap gap-4 items-center mb-3">
+                {/* Font Family Dropdown */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold text-gray-700">Font:</label>
+                  <select
+                    value={fontFamily}
+                    onChange={(e) => handleFontFamilyChange(e.target.value)}
+                    className="px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:border-indigo-600 focus:outline-none transition-all cursor-pointer hover:border-indigo-400"
+                    style={{ fontFamily: fontFamily }}
+                  >
+                    {fontFamilies.map((font) => (
+                      <option key={font} value={font} style={{ fontFamily: font }}>
+                        {font}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Font Color Picker */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-bold text-gray-700">Color:</label>
+                  <div className="flex gap-2">
+                    {/* Predefined colors */}
+                    {['#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'].map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => handleTextColorChange(color)}
+                        className={`w-8 h-8 rounded-lg border-2 transition-all ${
+                          textColor === color ? 'border-indigo-600 scale-110 shadow-lg' : 'border-gray-300'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                    {/* Custom color picker */}
+                    <label className="relative w-8 h-8 rounded-lg border-2 border-gray-300 cursor-pointer hover:border-indigo-400 transition-all overflow-hidden">
+                      <input
+                        type="color"
+                        value={textColor}
+                        onChange={(e) => handleTextColorChange(e.target.value)}
+                        className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-600">
+                        +
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4 items-center">
+                {/* Font Size Slider */}
+                <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                  <label className="text-xs font-bold text-gray-700">Size:</label>
+                  <input
+                    type="range"
+                    min="12"
+                    max="100"
+                    value={fontSize}
+                    onChange={(e) => handleFontSizeChange(Number(e.target.value))}
+                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                  />
+                  <span className="text-sm font-bold text-gray-800 min-w-[40px]">{fontSize}px</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-600 mt-2">💡 Select text on canvas to change its font, color, and size</p>
+            </div>
+
             <div className="flex flex-wrap gap-2 sm:gap-3 mb-2">
               <button
                 onClick={handleAddText}
@@ -882,90 +1075,6 @@ function Customize({ onAddToCart }) {
                 <strong>✓ Looks good?</strong> Click "Add Customized Product to Cart" to save this design with your order.
               </p>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Size and Quantity Selection Modal */}
-      {showSizeModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowSizeModal(false)}>
-          <div className="relative max-w-md w-full bg-white rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setShowSizeModal(false)}
-              className="absolute -top-3 -right-3 bg-red-600 text-white rounded-full p-2 shadow-lg hover:bg-red-700 transition z-10"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-              {(product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts") 
-                ? 'Select Size & Quantity' 
-                : 'Select Quantity'}
-            </h3>
-            
-            {/* Size Selection - Only for clothing categories */}
-            {(product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts") && (
-              <div className="mb-6">
-                <label className="block text-sm font-bold text-gray-700 mb-3">Select Size</label>
-                <div className="flex gap-2 justify-center">
-                  {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-                    <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`w-12 h-12 rounded-lg font-bold text-sm transition-all duration-200 ${
-                        selectedSize === size
-                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-110'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
-                      }`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Quantity Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-gray-700 mb-3 text-center">Select Quantity</label>
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  onClick={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
-                  disabled={selectedQuantity === 1}
-                  className={`w-10 h-10 rounded-lg font-bold text-xl transition-colors ${
-                    selectedQuantity === 1
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                  }`}
-                >
-                  −
-                </button>
-                <span className="text-2xl font-bold text-gray-900 min-w-[60px] text-center">
-                  {selectedQuantity}
-                </span>
-                <button
-                  onClick={() => setSelectedQuantity(Math.min(99, selectedQuantity + 1))}
-                  disabled={selectedQuantity === 99}
-                  className={`w-10 h-10 rounded-lg font-bold text-xl transition-colors ${
-                    selectedQuantity === 99
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                  }`}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-            
-            {/* Confirm Button */}
-            <button
-              onClick={confirmAddToCart}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              {pendingAddType === 'buyNow' || pendingAddType === 'buyCustomized' ? 'Buy Now' : 'Add to Cart'}
-            </button>
           </div>
         </div>
       )}
