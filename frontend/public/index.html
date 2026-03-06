@@ -9,10 +9,19 @@
     <meta name="keywords" content="online shopping, ecommerce, shop, products, buy online" />
     <meta name="author" content="ShopHub" />
     <meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()" />
+    
+    <!-- Preconnect to external domains for faster loading -->
+    <link rel="preconnect" href="https://checkout.razorpay.com" />
+    <link rel="preconnect" href="https://res.cloudinary.com" />
+    <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
+    <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+    
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!-- Razorpay Checkout Script -->
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <!-- Razorpay Checkout Script - Load async and defer -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js" async defer></script>
+    
     <title>ShopHub - Online Shopping Made Easy</title>
   </head>
   <body>

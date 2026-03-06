@@ -3,6 +3,7 @@ import express from 'express';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import cors from 'cors';
+import compression from 'compression';
 import connectDB from './config/database.js';
 import { requestLogger } from './middleware/logger.js';
 
@@ -24,6 +25,9 @@ const MONGO_URI = process.env.MONGO_URI;
 app.set('trust proxy', 1);
 
 // ------------------ MIDDLEWARE ------------------
+// Enable gzip compression for all responses
+app.use(compression());
+
 // CORS must be configured BEFORE session middleware
 const allowedOrigins = [
   'http://localhost:3000',
@@ -45,7 +49,10 @@ app.use(cors({
   },
   credentials: true, // Allow cookies to be sent
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control'],
+  exposedHeaders: ['Content-Length', 'Content-Type'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 // Increase payload limit for base64 images (composite customizations)

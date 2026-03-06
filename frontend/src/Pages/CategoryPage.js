@@ -197,7 +197,6 @@ function CategoryPage() {
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all duration-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
             </div>
-
             {/* Min Rating */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">

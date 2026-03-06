@@ -67,16 +67,38 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
+    console.log('\n=== UPDATE PRODUCT DEBUG ===');
+    console.log('📝 Product ID:', req.params.id);
+    console.log('📦 Update data:', JSON.stringify(req.body, null, 2));
+    
+    // Find the existing product first
+    const existingProduct = await Product.findById(req.params.id);
+    if (!existingProduct) {
+      console.log('❌ Product not found');
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    console.log('📸 Existing images:', existingProduct.images);
+    console.log('📸 New images:', req.body.images);
+    
+    // Update the product with new data
     const updatedProduct = await Product.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
-    if (!updatedProduct) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
+    
+    console.log('✅ Product updated successfully!');
+    console.log('   - Product ID:', updatedProduct._id);
+    console.log('   - Name:', updatedProduct.name);
+    console.log('   - Category:', updatedProduct.category);
+    console.log('   - Photo:', updatedProduct.photo);
+    console.log('   - Images:', updatedProduct.images);
+    console.log('==========================\n');
+    
     res.json(updatedProduct);
   } catch (err) {
+    console.error('❌ Product update error:', err);
     res.status(500).json({ error: err.message });
   }
 };

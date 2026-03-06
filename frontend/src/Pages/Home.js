@@ -31,15 +31,9 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
   const [loadingMongo, setLoadingMongo] = React.useState(true);
   const [showBuyModal, setShowBuyModal] = React.useState(false);
   const [showDetailsModal, setShowDetailsModal] = React.useState(false);
-  const [showEditModal, setShowEditModal] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState(null);
   const [selectedCategory, setSelectedCategory] = React.useState('all');
   const [showUpdateToast, setShowUpdateToast] = React.useState(false);
-  
-  // Edit Form State
-  const [editFormData, setEditFormData] = React.useState({
-    name: '', price: '', rating: '', photo: '', description: ''
-  });
 
   const handleBuyClick = (product, e) => {
     e.stopPropagation();
@@ -87,42 +81,8 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
 
   const handleEditClick = (product, e) => {
     e.stopPropagation();
-    setSelectedProduct(product);
-    setEditFormData({
-        name: product.name,
-        price: product.price,
-        rating: product.rating,
-        photo: product.photo,
-        description: product.description
-    });
-    setShowEditModal(true);
-  };
-
-  const handleEditChange = (e) => {
-    setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
-  };
-
-  const handleUpdateProduct = async (e) => {
-    e.preventDefault();
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/products/${selectedProduct._id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(editFormData)
-        });
-
-        if (response.ok) {
-            setShowUpdateToast(true);
-            setShowEditModal(false);
-            if (onProductUpdate) onProductUpdate();
-        } else {
-            const data = await response.json();
-            alert("Update failed: " + data.error);
-        }
-    } catch (err) {
-        console.error(err);
-        alert("Error connecting to server");
-    }
+    // Navigate to edit page instead of showing modal
+    navigate(`/admin/products/edit/${product._id || product.id}`);
   };
 
   const closeBuyModal = () => {
@@ -133,11 +93,6 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
   const closeDetailsModal = () => {
     setShowDetailsModal(false);
     setSelectedProduct(null);
-  };
-
-  const closeEditModal = () => {
-      setShowEditModal(false);
-      setSelectedProduct(null);
   };
 
   // Buy Form State
@@ -419,6 +374,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                 <div className="relative h-56 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                   <img
                     src={product.image || product.photo || 'https://via.placeholder.com/300?text=No+Image'}
+                    loading="lazy"
                     alt={product.title || product.name || 'Product image'}
                     width="300"
                     height="224"
@@ -524,6 +480,7 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
             <div className="w-full md:w-1/2 h-64 md:h-auto bg-gradient-to-br from-gray-50 to-gray-100 relative flex items-center justify-center">
                <img 
                  src={selectedProduct.image || selectedProduct.photo || 'https://via.placeholder.com/300?text=No+Image'} 
+                 loading="lazy"
                  alt={selectedProduct.title || selectedProduct.name}
                  className="w-full h-full object-contain p-8"
                  onError={(e) => { e.target.src = 'https://via.placeholder.com/300?text=Error'; }}
@@ -567,111 +524,6 @@ function Home({ products = [], onAddToCart, user, onProductUpdate }) {
                    </button>
                  </div>
                )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Product Modal (Admin Only) */}
-      {showEditModal && selectedProduct && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden relative animate-slideUp">
-            
-            {/* Close Button */}
-            <button 
-              onClick={closeEditModal}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-all z-10 bg-white rounded-full p-2 shadow-lg hover:shadow-xl hover:rotate-90 duration-300"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <div className="p-8">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">Edit Product</h2>
-              
-              <form onSubmit={handleUpdateProduct} className="space-y-5">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Product Name</label>
-                  <input 
-                    type="text" 
-                    name="name"
-                    value={editFormData.name}
-                    onChange={handleEditChange}
-                    required 
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all duration-300" 
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Price (₹)</label>
-                    <input 
-                      type="number" 
-                      name="price"
-                      value={editFormData.price}
-                      onChange={handleEditChange}
-                      step="0.01"
-                      required 
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all duration-300" 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Rating</label>
-                    <input 
-                      type="number" 
-                      name="rating"
-                      value={editFormData.rating}
-                      onChange={handleEditChange}
-                      step="0.1"
-                      min="0"
-                      max="5"
-                      required 
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all duration-300" 
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Photo URL</label>
-                  <input 
-                    type="url" 
-                    name="photo"
-                    value={editFormData.photo}
-                    onChange={handleEditChange}
-                    required 
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all duration-300" 
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                  <textarea 
-                    name="description"
-                    value={editFormData.description}
-                    onChange={handleEditChange}
-                    required 
-                    rows="4" 
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none resize-none transition-all duration-300"
-                  ></textarea>
-                </div>
-
-                <div className="flex gap-4 pt-4">
-                  <button 
-                    type="button"
-                    onClick={closeEditModal}
-                    className="flex-1 bg-gray-100 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-200 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    type="submit" 
-                    className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3 rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                  >
-                    Update Product
-                  </button>
-                </div>
-              </form>
             </div>
           </div>
         </div>
