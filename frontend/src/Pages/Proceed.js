@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import API_BASE_URL from "../config/api";
-import { getOrderItemImage } from '../utils/imageUtils';
 
 function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
   const navigate = useNavigate();
@@ -9,7 +8,10 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
   
   // Check if single item purchase
   const singleItem = location.state?.singleItem;
-  const itemsToPurchase = singleItem ? [singleItem] : cartItems;
+  const itemsToPurchase = useMemo(() => 
+    singleItem ? [singleItem] : cartItems,
+    [singleItem, cartItems]
+  );
   const total = itemsToPurchase.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
   
   // Debug: Log items when component loads
@@ -29,7 +31,7 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
         hasAnyImage: !!(item.image || item.photo || item.frontDesignUrl || item.customizationPreview)
       });
     });
-  }, [singleItem, cartItems, itemsToPurchase]);
+  }, [singleItem, cartItems.length, itemsToPurchase]);
   
   const [formData, setFormData] = useState({
     fullName: user ? `${user.firstName} ${user.lastName}` : '',
