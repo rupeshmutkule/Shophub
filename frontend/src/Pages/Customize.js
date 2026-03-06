@@ -24,6 +24,12 @@ function Customize({ onAddToCart }) {
   const [backDesignUrl, setBackDesignUrl] = useState(null);
   const [showBothDesigns, setShowBothDesigns] = useState(false);
   const [bothDesignsIndex, setBothDesignsIndex] = useState(0);
+  const [showSizeModal, setShowSizeModal] = useState(false);
+  const [selectedSize, setSelectedSize] = useState('M');
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [pendingAddType, setPendingAddType] = useState(null); // 'customized', 'skip', or 'buyNow'
+  const [frontCanvasState, setFrontCanvasState] = useState(null); // Store front canvas JSON
+  const [backCanvasState, setBackCanvasState] = useState(null); // Store back canvas JSON
 
   // Get product images
   const getProductImages = () => {
@@ -121,33 +127,68 @@ function Customize({ onAddToCart }) {
     const canvas = fabricRef.current;
     if (!canvas) return;
 
-    const objectUrl = URL.createObjectURL(file);
-    try {
-      const img = await FabricImage.fromURL(objectUrl, { crossOrigin: "anonymous" });
+    // Convert file to base64 to avoid blob URL issues
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const base64Url = event.target.result;
+        const img = await FabricImage.fromURL(base64Url, { crossOrigin: "anonymous" });
 
-      // Center it and scale to fit
-      img.set({
-        left: canvas.getWidth() / 2,
-        top: canvas.getHeight() / 2,
-        originX: "center",
-        originY: "center",
-        selectable: true,
-      });
-      img.scaleToWidth(canvas.getWidth() * 0.35);
+        // Center it and scale to fit
+        img.set({
+          left: canvas.getWidth() / 2,
+          top: canvas.getHeight() / 2,
+          originX: "center",
+          originY: "center",
+          selectable: true,
+        });
+        img.scaleToWidth(canvas.getWidth() * 0.35);
 
-      canvas.add(img);
-      canvas.setActiveObject(img);
-      canvas.renderAll();
-    } finally {
-      URL.revokeObjectURL(objectUrl);
-      // allow uploading same file again
-      e.target.value = "";
-    }
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.renderAll();
+      } catch (err) {
+        console.error('Error loading image:', err);
+        alert('Failed to load image. Please try again.');
+      }
+    };
+    reader.readAsDataURL(file);
+    
+    // Allow uploading same file again
+    e.target.value = "";
   };
 
   const handleBringToFront = () => {
     // Show front image (index 0)
     if (productImages.length > 0) {
+      const canvas = fabricRef.current;
+      if (canvas) {
+        // Save current canvas state (back side) with base64 images
+        if (currentImageIndex > 0) {
+          const canvasJSON = canvas.toJSON();
+          setBackCanvasState(canvasJSON);
+          
+          // Check if canvas is empty before clearing saved design
+          if (canvas.getObjects().length === 0 && backDesignUrl) {
+            setBackDesignUrl(null);
+          }
+        }
+        
+        // Clear canvas
+        canvas.clear();
+        
+        // Restore front canvas state if it exists
+        if (frontCanvasState) {
+          canvas.loadFromJSON(frontCanvasState, () => {
+            canvas.renderAll();
+          }, (o, object) => {
+            // Revive function - handle image loading errors
+            if (object.type === 'image' && object.src && object.src.startsWith('blob:')) {
+              console.warn('Skipping blob URL image:', object.src);
+            }
+          });
+        }
+      }
       setCurrentImageIndex(0);
     }
   };
@@ -155,6 +196,34 @@ function Customize({ onAddToCart }) {
   const handleSendToBack = () => {
     // Show back image (last index)
     if (productImages.length > 1) {
+      const canvas = fabricRef.current;
+      if (canvas) {
+        // Save current canvas state (front side) with base64 images
+        if (currentImageIndex === 0) {
+          const canvasJSON = canvas.toJSON();
+          setFrontCanvasState(canvasJSON);
+          
+          // Check if canvas is empty before clearing saved design
+          if (canvas.getObjects().length === 0 && frontDesignUrl) {
+            setFrontDesignUrl(null);
+          }
+        }
+        
+        // Clear canvas
+        canvas.clear();
+        
+        // Restore back canvas state if it exists
+        if (backCanvasState) {
+          canvas.loadFromJSON(backCanvasState, () => {
+            canvas.renderAll();
+          }, (o, object) => {
+            // Revive function - handle image loading errors
+            if (object.type === 'image' && object.src && object.src.startsWith('blob:')) {
+              console.warn('Skipping blob URL image:', object.src);
+            }
+          });
+        }
+      }
       setCurrentImageIndex(productImages.length - 1);
     } else if (productImages.length === 1) {
       setCurrentImageIndex(0);
@@ -168,6 +237,20 @@ function Customize({ onAddToCart }) {
     if (obj) {
       canvas.remove(obj);
       canvas.renderAll();
+      
+      // Check if canvas is now empty
+      const remainingObjects = canvas.getObjects().length;
+      
+      // If canvas is empty and we're on a saved design side, clear that saved design
+      if (remainingObjects === 0) {
+        if (currentImageIndex === 0 && frontDesignUrl) {
+          // Clear front design if we're on front side and it's now empty
+          setFrontDesignUrl(null);
+        } else if (currentImageIndex > 0 && backDesignUrl) {
+          // Clear back design if we're on back side and it's now empty
+          setBackDesignUrl(null);
+        }
+      }
     }
   };
 
@@ -291,6 +374,9 @@ function Customize({ onAddToCart }) {
     try {
       const compositeUrl = await createCompositeImage(canvas, productImages[0]);
       setFrontDesignUrl(compositeUrl);
+      // Also save the canvas state
+      const canvasJSON = canvas.toJSON();
+      setFrontCanvasState(canvasJSON);
       alert("✅ Front design saved!");
     } catch (err) {
       console.error('❌ Error saving front design:', err);
@@ -313,6 +399,9 @@ function Customize({ onAddToCart }) {
     try {
       const compositeUrl = await createCompositeImage(canvas, productImages[productImages.length - 1]);
       setBackDesignUrl(compositeUrl);
+      // Also save the canvas state
+      const canvasJSON = canvas.toJSON();
+      setBackCanvasState(canvasJSON);
       alert("✅ Back design saved!");
     } catch (err) {
       console.error('❌ Error saving back design:', err);
@@ -320,13 +409,36 @@ function Customize({ onAddToCart }) {
     }
   };
 
-  const handleAddToCart = async () => {
-    if (!onAddToCart || !product) return;
+  const handleAddToCartClick = () => {
+    setPendingAddType('customized');
+    setShowSizeModal(true);
+  };
+
+  const handleSkipAndAddClick = () => {
+    setPendingAddType('skip');
+    setShowSizeModal(true);
+  };
+
+  const handleBuyNowClick = () => {
     const canvas = fabricRef.current;
     const hasCustomization = canvas && canvas.getObjects().length > 0;
     
-    if (!hasCustomization) {
-      // No customization, just add regular product
+    if (hasCustomization) {
+      setPendingAddType('buyCustomized');
+    } else {
+      setPendingAddType('buyNow');
+    }
+    setShowSizeModal(true);
+  };
+
+  const confirmAddToCart = async () => {
+    if (!onAddToCart || !product) return;
+    
+    setShowSizeModal(false);
+    
+    if (pendingAddType === 'skip') {
+      // Add without customization
+      const isClothing = product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts";
       const normalized = {
         name: product.title,
         price: product.price,
@@ -337,9 +449,42 @@ function Customize({ onAddToCart }) {
         customDesignUrl: null,
         isCustomized: false,
         customizationPreview: null,
+        ...(isClothing && { size: selectedSize }), // Only add size for clothing
+        quantity: selectedQuantity,
       };
+      
       onAddToCart(normalized);
       navigate("/carts");
+      return;
+    }
+
+    if (pendingAddType === 'buyNow') {
+      // Buy now without customization
+      const isClothing = product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts";
+      const normalized = {
+        name: product.title,
+        price: product.price,
+        rating: product.rating?.rate ?? 0,
+        photo: product.image,
+        description: product.description,
+        fakestoreId: product.id,
+        customDesignUrl: null,
+        isCustomized: false,
+        customizationPreview: null,
+        ...(isClothing && { size: selectedSize }), // Only add size for clothing
+        quantity: selectedQuantity,
+      };
+      
+      navigate('/proceed', { state: { singleItem: normalized } });
+      return;
+    }
+
+    // Add with customization (customized or buyCustomized)
+    const canvas = fabricRef.current;
+    const hasCustomization = canvas && canvas.getObjects().length > 0;
+    
+    if (!hasCustomization) {
+      alert("Please add some text or logo first!");
       return;
     }
 
@@ -379,6 +524,7 @@ function Customize({ onAddToCart }) {
         throw new Error('Cloudinary upload failed - no URL returned');
       }
       
+      const isClothing = product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts";
       const normalized = {
         name: product.title,
         price: product.price,
@@ -391,6 +537,8 @@ function Customize({ onAddToCart }) {
         customizationPreview: uploadedUrl, // Composite image URL
         frontDesignUrl: frontDesignUrl || null,
         backDesignUrl: backDesignUrl || null,
+        ...(isClothing && { size: selectedSize }), // Only add size for clothing
+        quantity: selectedQuantity,
       };
       
       console.log('🔍 STEP 4: CART ITEM OBJECT');
@@ -399,12 +547,20 @@ function Customize({ onAddToCart }) {
       console.log('   - photo (original):', normalized.photo);
       console.log('   - customizationPreview (composite):', normalized.customizationPreview);
       console.log('   - customDesignUrl (composite):', normalized.customDesignUrl);
+      console.log('   - size:', normalized.size);
+      console.log('   - quantity:', normalized.quantity);
       console.log('   - Full cart item:', JSON.stringify(normalized, null, 2));
       
       console.log('✅ ADDING TO CART WITH COMPOSITE URL');
       
-      onAddToCart(normalized);
-      navigate("/carts");
+      if (pendingAddType === 'buyCustomized') {
+        // Buy now with customization
+        navigate('/proceed', { state: { singleItem: normalized } });
+      } else {
+        // Add to cart with customization
+        onAddToCart(normalized);
+        navigate("/carts");
+      }
       
     } catch (err) {
       console.error('❌ Error creating composite:', err);
@@ -414,23 +570,7 @@ function Customize({ onAddToCart }) {
     }
   };
 
-  const handleAddWithoutCustomization = () => {
-    if (!onAddToCart || !product) return;
 
-    const normalized = {
-      name: product.title,
-      price: product.price,
-      rating: product.rating?.rate ?? 0,
-      photo: product.image,
-      description: product.description,
-      fakestoreId: product.id,
-      customDesignUrl: null,
-      isCustomized: false,
-      customizationPreview: null,
-    };
-    onAddToCart(normalized);
-    navigate("/carts");
-  };
 
   if (loading || !product) {
     return (
@@ -532,8 +672,28 @@ function Customize({ onAddToCart }) {
                     : 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                💾 Save Front Side {frontDesignUrl ? '✓' : ''}
+                💾 Save Front {frontDesignUrl ? '✓' : ''}
               </button>
+              {frontDesignUrl && (
+                <button
+                  onClick={() => {
+                    setFrontDesignUrl(null);
+                    setFrontCanvasState(null); // Also clear canvas state
+                    // If currently on front side, clear the canvas
+                    if (currentImageIndex === 0) {
+                      const canvas = fabricRef.current;
+                      if (canvas) {
+                        canvas.clear();
+                        canvas.renderAll();
+                      }
+                    }
+                    alert('✅ Front design cleared!');
+                  }}
+                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition whitespace-nowrap border border-red-300"
+                >
+                  🗑️ Clear Front
+                </button>
+              )}
               <button
                 onClick={handleSaveBackDesign}
                 className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-xl transition whitespace-nowrap ${
@@ -542,8 +702,28 @@ function Customize({ onAddToCart }) {
                     : 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50'
                 }`}
               >
-                💾 Save Back Side {backDesignUrl ? '✓' : ''}
+                💾 Save Back {backDesignUrl ? '✓' : ''}
               </button>
+              {backDesignUrl && (
+                <button
+                  onClick={() => {
+                    setBackDesignUrl(null);
+                    setBackCanvasState(null); // Also clear canvas state
+                    // If currently on back side, clear the canvas
+                    if (currentImageIndex > 0) {
+                      const canvas = fabricRef.current;
+                      if (canvas) {
+                        canvas.clear();
+                        canvas.renderAll();
+                      }
+                    }
+                    alert('✅ Back design cleared!');
+                  }}
+                  className="px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition whitespace-nowrap border border-red-300"
+                >
+                  🗑️ Clear Back
+                </button>
+              )}
               {(frontDesignUrl || backDesignUrl) && (
                 <button
                   onClick={() => {
@@ -557,10 +737,28 @@ function Customize({ onAddToCart }) {
               )}
             </div>
 
-            <div className="border-2 border-dashed border-gray-200 rounded-2xl bg-white flex items-center justify-center p-6">
+            {/* Canvas container with extra top padding for buttons */}
+            <div className="border-2 border-dashed border-gray-200 rounded-2xl bg-white flex items-center justify-center p-6 pt-16">
               <div className="relative w-[520px] max-w-full">
+                {/* Image indicator badge - positioned outside canvas */}
+                <div className="absolute -top-12 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg flex items-center gap-2 z-20">
+                  <span className="text-lg">{currentImageIndex === 0 ? '👕' : '🔄'}</span>
+                  {currentImageIndex === 0 ? 'FRONT' : 'BACK'}
+                </div>
+                
+                {/* Delete button - positioned outside canvas */}
+                <button
+                  onClick={handleDeleteSelected}
+                  className="absolute -top-12 left-0 bg-red-600 text-white rounded-full p-2 shadow-lg hover:bg-red-700 transition z-20"
+                  title="Delete selected element (click element first, then click this)"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                
                 {/* Product image as background */}
-                <div className="relative w-full group" style={{ aspectRatio: '520/620' }}>
+                <div className="relative w-full" style={{ aspectRatio: '520/620' }}>
                   <img
                     src={currentImage}
                     alt={product.title}
@@ -568,42 +766,25 @@ function Customize({ onAddToCart }) {
                     draggable={false}
                   />
                   
-                  {/* Image indicator badge */}
-                  <div className="absolute top-3 right-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg flex items-center gap-2">
-                    <span className="text-lg">{currentImageIndex === 0 ? '👕' : '🔄'}</span>
-                    {currentImageIndex === 0 ? 'FRONT' : 'BACK'}
-                  </div>
-                  
                   {/* Fabric canvas overlays the product */}
                   <div className="absolute inset-0">
                     <canvas ref={canvasRef} className="block" />
                   </div>
-
-                  {/* Delete button overlay - appears on hover */}
-                  <button
-                    onClick={handleDeleteSelected}
-                    className="absolute top-3 left-3 bg-red-600 text-white rounded-full p-2 shadow-lg hover:bg-red-700 transition opacity-0 group-hover:opacity-100 z-10"
-                    title="Delete selected element (click element first, then click this)"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 mt-4">
               <button
-                onClick={handleAddWithoutCustomization}
+                onClick={handleSkipAndAddClick}
                 className="flex-1 px-4 sm:px-6 py-2 sm:py-3 text-sm font-bold rounded-xl bg-white border-2 border-gray-300 text-gray-800 hover:border-gray-400 hover:bg-gray-50 transition shadow-sm"
               >
                 Skip & Add to Cart
               </button>
               <button
-                onClick={handleAddToCart}
+                onClick={handleAddToCartClick}
                 disabled={adding}
-                className="flex-1 px-4 sm:px-6 py-2 sm:py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 px-4 sm:px-6 py-2 sm:py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 transition shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {adding ? (
                   <span className="flex items-center justify-center gap-2">
@@ -611,17 +792,47 @@ function Customize({ onAddToCart }) {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <span className="hidden sm:inline">Creating Design...</span>
-                    <span className="sm:hidden">Creating...</span>
+                    <span className="hidden sm:inline">Creating...</span>
                   </span>
                 ) : (
                   <>
-                    <span className="hidden sm:inline">✨ Add Customized to Cart</span>
-                    <span className="sm:hidden">✨ Add to Cart</span>
+                    <span className="hidden sm:inline">✨ Add Customized</span>
+                    <span className="sm:hidden">✨ Add</span>
                   </>
                 )}
               </button>
             </div>
+            
+            <button
+              onClick={handleBuyNowClick}
+              disabled={adding}
+              className="w-full px-4 sm:px-6 py-2 sm:py-3 text-sm font-bold rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed mt-3"
+            >
+              {adding ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="hidden sm:inline">Processing...</span>
+                  <span className="sm:hidden">Wait...</span>
+                </span>
+              ) : (
+                <>
+                  {(frontDesignUrl || backDesignUrl) ? (
+                    <>
+                      <span className="hidden sm:inline">🛒 Buy Customized Product</span>
+                      <span className="sm:hidden">🛒 Buy Custom</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="hidden sm:inline">🛒 Buy Now</span>
+                      <span className="sm:hidden">🛒 Buy</span>
+                    </>
+                  )}
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -671,6 +882,90 @@ function Customize({ onAddToCart }) {
                 <strong>✓ Looks good?</strong> Click "Add Customized Product to Cart" to save this design with your order.
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Size and Quantity Selection Modal */}
+      {showSizeModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowSizeModal(false)}>
+          <div className="relative max-w-md w-full bg-white rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowSizeModal(false)}
+              className="absolute -top-3 -right-3 bg-red-600 text-white rounded-full p-2 shadow-lg hover:bg-red-700 transition z-10"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              {(product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts") 
+                ? 'Select Size & Quantity' 
+                : 'Select Quantity'}
+            </h3>
+            
+            {/* Size Selection - Only for clothing categories */}
+            {(product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts") && (
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-gray-700 mb-3">Select Size</label>
+                <div className="flex gap-2 justify-center">
+                  {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`w-12 h-12 rounded-lg font-bold text-sm transition-all duration-200 ${
+                        selectedSize === size
+                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-110'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Quantity Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-gray-700 mb-3 text-center">Select Quantity</label>
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
+                  disabled={selectedQuantity === 1}
+                  className={`w-10 h-10 rounded-lg font-bold text-xl transition-colors ${
+                    selectedQuantity === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  −
+                </button>
+                <span className="text-2xl font-bold text-gray-900 min-w-[60px] text-center">
+                  {selectedQuantity}
+                </span>
+                <button
+                  onClick={() => setSelectedQuantity(Math.min(99, selectedQuantity + 1))}
+                  disabled={selectedQuantity === 99}
+                  className={`w-10 h-10 rounded-lg font-bold text-xl transition-colors ${
+                    selectedQuantity === 99
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            
+            {/* Confirm Button */}
+            <button
+              onClick={confirmAddToCart}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+            >
+              {pendingAddType === 'buyNow' || pendingAddType === 'buyCustomized' ? 'Buy Now' : 'Add to Cart'}
+            </button>
           </div>
         </div>
       )}

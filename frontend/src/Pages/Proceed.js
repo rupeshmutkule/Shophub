@@ -9,7 +9,7 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
   // Check if single item purchase
   const singleItem = location.state?.singleItem;
   const itemsToPurchase = singleItem ? [singleItem] : cartItems;
-  const total = itemsToPurchase.reduce((sum, item) => sum + Number(item.price), 0);
+  const total = itemsToPurchase.reduce((sum, item) => sum + (Number(item.price) * (item.quantity || 1)), 0);
   
   const [formData, setFormData] = useState({
     fullName: user ? `${user.firstName} ${user.lastName}` : '',
@@ -218,6 +218,22 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
 
   // Common order creation function
   const createOrder = async (paymentData) => {
+    // Group items by product and add quantity
+    const groupedItems = {};
+    itemsToPurchase.forEach(item => {
+      const key = `${item.name}-${item.price}-${item.photo || item.image}`;
+      if (!groupedItems[key]) {
+        groupedItems[key] = {
+          ...item,
+          quantity: 1
+        };
+      } else {
+        groupedItems[key].quantity += 1;
+      }
+    });
+    
+    const itemsWithQuantity = Object.values(groupedItems);
+    
     const orderData = {
       customerName: formData.fullName,
       email: formData.email,
@@ -225,7 +241,7 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
       address: formData.address,
       city: formData.city,
       zip: formData.zip,
-      items: itemsToPurchase,
+      items: itemsWithQuantity,
       total: total,
       ...paymentData
     };
@@ -548,14 +564,33 @@ function Proceed({ cartItems = [], onPlaceOrder, onRemoveSingleItem, user }) {
                       </div>
                       <div className="flex-1">
                         <h4 className="text-sm font-bold text-gray-900 line-clamp-1">{item.name}</h4>
-                        {item.isCustomized && (
-                          <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                            ✨ Customized
-                          </span>
-                        )}
-                        <p className="text-xs text-gray-500">Qty: 1</p>
+                        <div className="flex items-center gap-2 flex-wrap mt-1">
+                          {item.isCustomized && (
+                            <span className="inline-block bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                              ✨ Customized
+                            </span>
+                          )}
+                          {item.size && (
+                            <span className="inline-block bg-indigo-100 text-indigo-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                              Size: {item.size}
+                            </span>
+                          )}
+                          {item.quantity && item.quantity > 1 && (
+                            <span className="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                              Qty: {item.quantity}
+                            </span>
+                          )}
+                        </div>
+                        {!item.quantity || item.quantity === 1 ? (
+                          <p className="text-xs text-gray-500 mt-1">Qty: 1</p>
+                        ) : null}
                       </div>
-                      <span className="font-bold text-gray-900">₹{Number(item.price).toFixed(2)}</span>
+                      <div className="text-right">
+                        <span className="font-bold text-gray-900 block">₹{Number(item.price).toFixed(2)}</span>
+                        {item.quantity && item.quantity > 1 && (
+                          <span className="text-xs text-gray-500">× {item.quantity}</span>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}

@@ -3,7 +3,6 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
-import SuccessToast from "./components/SuccessToast";
 import API_BASE_URL from "./config/api";
 
 // Eager load critical pages
@@ -143,7 +142,6 @@ function App() {
 
   const [cart, setCart] = useState([]);
   const isInitialLoad = useRef(true);
-  const [showAddToCartToast, setShowAddToCartToast] = useState(false);
 
   // Load cart from localStorage on mount (guest or user-specific)
   useEffect(() => {
@@ -166,7 +164,13 @@ function App() {
 
   const handleAddToCart = (product) => {
     setCart(prevCart => [...prevCart, product]);
-    setShowAddToCartToast(true);
+    // Show green alert instead of toast
+    alert('✅ Added to cart!');
+  };
+  
+  const handleAddOneToCart = (product) => {
+    // Add one more of the same product to cart (used in Carts page)
+    setCart(prevCart => [...prevCart, product]);
   };
 
   const handleRemoveFromCart = (index) => {
@@ -210,9 +214,19 @@ function App() {
       });
   };
 
+  // Calculate unique products count for cart badge
+  const getUniqueProductsCount = () => {
+    const uniqueProducts = {};
+    cart.forEach(item => {
+      const key = `${item.name}-${item.price}-${item.photo || item.image}`;
+      uniqueProducts[key] = true;
+    });
+    return Object.keys(uniqueProducts).length;
+  };
+
   return (
     <>
-      <Navbar cartCount={cart.length} user={user} onLogout={handleLogout} />
+      <Navbar cartCount={getUniqueProductsCount()} user={user} onLogout={handleLogout} />
       <ScrollToTop />
 
       <Suspense fallback={<PageLoader />}>
@@ -221,8 +235,8 @@ function App() {
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/products" element={<Products />} />
-          <Route path="/carts" element={<Carts cartItems={cart} onRemoveFromCart={handleRemoveFromCart} onBuyNow={handleBuyNow} />} />
-          <Route path="/cart" element={<Carts cartItems={cart} onRemoveFromCart={handleRemoveFromCart} onBuyNow={handleBuyNow} />} />
+          <Route path="/carts" element={<Carts cartItems={cart} onRemoveFromCart={handleRemoveFromCart} onAddOneToCart={handleAddOneToCart} onBuyNow={handleBuyNow} />} />
+          <Route path="/cart" element={<Carts cartItems={cart} onRemoveFromCart={handleRemoveFromCart} onAddOneToCart={handleAddOneToCart} onBuyNow={handleBuyNow} />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/about" element={<About />} />
@@ -245,14 +259,6 @@ function App() {
       </Suspense>
 
       <Footer />
-
-      {/* Add to Cart Success Toast */}
-      <SuccessToast
-        message="Added to cart!"
-        isOpen={showAddToCartToast}
-        onClose={() => setShowAddToCartToast(false)}
-        duration={2000}
-      />
     </>
   );
 }

@@ -13,6 +13,10 @@ function ProductDetails({ onAddToCart, user }) {
   const [reviews, setReviews] = useState([]);
   const [reviewMeta, setReviewMeta] = useState({ averageRating: 0, count: 0 });
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showSizeModal, setShowSizeModal] = useState(false);
+  const [selectedSize, setSelectedSize] = useState('M');
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [modalAction, setModalAction] = useState('addToCart'); // 'addToCart' or 'buyNow'
 
   const isAdminOrHost = user && (user.userType === 'admin' || user.userType === 'host');
 
@@ -107,7 +111,18 @@ function ProductDetails({ onAddToCart, user }) {
   };
 
   const handleAddToCartClick = () => {
+    setModalAction('addToCart');
+    setShowSizeModal(true);
+  };
+
+  const handleBuyNowClick = () => {
+    setModalAction('buyNow');
+    setShowSizeModal(true);
+  };
+
+  const confirmAddToCart = () => {
     if (!product || !onAddToCart) return;
+    const isClothing = product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts";
     const normalized = {
       name: product.title,
       price: product.price,
@@ -115,8 +130,29 @@ function ProductDetails({ onAddToCart, user }) {
       photo: product.image,
       description: product.description,
       fakestoreId: product.id,
+      ...(isClothing && { size: selectedSize }), // Only add size for clothing
+      quantity: selectedQuantity,
     };
     onAddToCart(normalized);
+    setShowSizeModal(false);
+    alert('✅ Added to cart!');
+  };
+
+  const confirmBuyNow = () => {
+    if (!product) return;
+    const isClothing = product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts";
+    const normalized = {
+      name: product.title,
+      price: product.price,
+      rating: product.rating?.rate ?? 0,
+      photo: product.image,
+      description: product.description,
+      fakestoreId: product.id,
+      ...(isClothing && { size: selectedSize }), // Only add size for clothing
+      quantity: selectedQuantity,
+    };
+    setShowSizeModal(false);
+    navigate('/proceed', { state: { singleItem: normalized } });
   };
 
   if (loading) {
@@ -260,19 +296,27 @@ function ProductDetails({ onAddToCart, user }) {
             ) : (
               // Regular users and agents
               <>
-                {/* Always show Customize button - user can choose to customize or not */}
-                <button
-                  onClick={handleCustomize}
-                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all"
-                >
-                  {product.isCustomizable !== false ? '✨ Customize' : '🎨 Customize (Optional)'}
-                </button>
-                <button
-                  onClick={handleAddToCartClick}
-                  className="flex-1 bg-white border-2 border-gray-200 text-gray-900 py-3 px-4 rounded-xl font-bold shadow-sm hover:shadow-md hover:border-indigo-500 hover:text-indigo-600 transition-all"
-                >
-                  Add to Cart
-                </button>
+                {/* All buttons with equal width in grid */}
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    onClick={handleCustomize}
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:shadow-lg hover:from-indigo-700 hover:to-purple-700 transition-all"
+                  >
+                    ✨ Customize
+                  </button>
+                  <button
+                    onClick={handleAddToCartClick}
+                    className="bg-white border-2 border-gray-300 text-gray-900 py-3 px-4 rounded-xl font-bold shadow-sm hover:shadow-md hover:border-indigo-500 hover:text-indigo-600 transition-all"
+                  >
+                    Add to Cart
+                  </button>
+                  <button
+                    onClick={handleBuyNowClick}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 px-4 rounded-xl font-bold shadow-md hover:shadow-lg hover:from-green-600 hover:to-emerald-700 transition-all"
+                  >
+                    Buy Now
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -306,6 +350,90 @@ function ProductDetails({ onAddToCart, user }) {
           </div>
         </div>
       </div>
+
+      {/* Size and Quantity Selection Modal */}
+      {showSizeModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setShowSizeModal(false)}>
+          <div className="relative max-w-md w-full bg-white rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowSizeModal(false)}
+              className="absolute -top-3 -right-3 bg-red-600 text-white rounded-full p-2 shadow-lg hover:bg-red-700 transition z-10"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+              {(product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts") 
+                ? 'Select Size & Quantity' 
+                : 'Select Quantity'}
+            </h3>
+            
+            {/* Size Selection - Only for clothing categories */}
+            {(product.category === "men's clothing" || product.category === "women's clothing" || product.category === "t-shirts") && (
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-gray-700 mb-3">Select Size</label>
+                <div className="flex gap-2 justify-center">
+                  {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => setSelectedSize(size)}
+                      className={`w-12 h-12 rounded-lg font-bold text-sm transition-all duration-200 ${
+                        selectedSize === size
+                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-110'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-2 border-gray-300'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Quantity Selection */}
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-gray-700 mb-3 text-center">Select Quantity</label>
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
+                  disabled={selectedQuantity === 1}
+                  className={`w-10 h-10 rounded-lg font-bold text-xl transition-colors ${
+                    selectedQuantity === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  −
+                </button>
+                <span className="text-2xl font-bold text-gray-900 min-w-[60px] text-center">
+                  {selectedQuantity}
+                </span>
+                <button
+                  onClick={() => setSelectedQuantity(Math.min(99, selectedQuantity + 1))}
+                  disabled={selectedQuantity === 99}
+                  className={`w-10 h-10 rounded-lg font-bold text-xl transition-colors ${
+                    selectedQuantity === 99
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            
+            {/* Confirm Button */}
+            <button
+              onClick={modalAction === 'addToCart' ? confirmAddToCart : confirmBuyNow}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-4 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+            >
+              {modalAction === 'addToCart' ? 'Add to Cart' : 'Buy Now'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,7 @@ const orderItemSchema = new mongoose.Schema(
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', index: true },
     productName: { type: String }, // snapshot
     quantity: { type: Number, min: 1 },
+    size: { type: String }, // Direct size field for easy access
 
     // Legacy fields (for backward compatibility with frontend)
     name: { type: String },

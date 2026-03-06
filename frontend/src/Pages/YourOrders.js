@@ -300,7 +300,17 @@ function YourOrders({ user }) {
                                    )}
                                  </div>
                                )}
-                               <p className="text-xs sm:text-sm text-gray-500">₹{Number(item.price || 0).toFixed(2)}</p>
+                               <div className="flex items-center gap-2 flex-wrap">
+                                 <p className="text-xs sm:text-sm text-gray-500">₹{Number(item.price || 0).toFixed(2)}</p>
+                                 {item.size && (
+                                   <span className="inline-block bg-purple-100 text-purple-700 text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full">
+                                     Size: {item.size}
+                                   </span>
+                                 )}
+                                 <span className="inline-block bg-indigo-100 text-indigo-700 text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full">
+                                   Qty: {item.quantity || 1}
+                                 </span>
+                               </div>
                                {canReviewOrder(order) && (
                                  <button
                                    onClick={() => openReviewModal(order._id, item)}

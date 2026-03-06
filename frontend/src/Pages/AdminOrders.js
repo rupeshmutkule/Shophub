@@ -514,10 +514,23 @@ function AdminOrders() {
                                   )}
                                 </div>
                               )}
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-4 flex-wrap">
                                 <span className="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                                   ₹{Number(item.price || 0).toFixed(2)}
                                 </span>
+                                {item.size && (
+                                  <span className="inline-block bg-purple-100 text-purple-700 text-sm font-bold px-3 py-1 rounded-full border border-purple-200">
+                                    Size: {item.size}
+                                  </span>
+                                )}
+                                <span className="inline-block bg-indigo-100 text-indigo-700 text-sm font-bold px-3 py-1 rounded-full border border-indigo-200">
+                                  Quantity: {item.quantity || 1}
+                                </span>
+                                {item.quantity && item.quantity > 1 && (
+                                  <span className="text-sm text-gray-600">
+                                    Subtotal: <span className="font-bold text-gray-900">₹{(Number(item.price || 0) * item.quantity).toFixed(2)}</span>
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
